@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "evolution_count": 4,
+  "learned_expressions": [
+    {
+      "id": "synth_joy_curious_01",
+      "context": "greeting_warm",
+      "morphs": {
+        "happy": 0.78,
+        "surprised": 0.24,
+        "cheekSquintLeft": 0.55,
+        "cheekSquintRight": 0.55,
+        "browInnerUp": 0.32
+      },
+      "secondary_bones": {
+        "jawOpen": 0.08,
+        "pupilScale": 1.12,
+        "browAsymmetry": 0.05
+      },
+      "body_posture": {
+        "spinePitch": 0.06,
+        "headTiltZ": 0.09,
+        "shoulderLift": 0.04,
+        "clip": "happy_gesture"
+      }
+    },
+    {
+      "id": "synth_smug_tease_02",
+      "context": "playful_tease",
+      "morphs": {
+        "happy": 0.52,
+        "relaxed": 0.44,
+        "blinkLeft": 0.28,
+        "mouthSmileRight": 0.82
+      },
+      "secondary_bones": {
+        "jawOpen": 0.02,
+        "pupilScale": 0.96,
+        "browAsymmetry": -0.14
+      },
+      "body_posture": {
+        "spinePitch": -0.05,
+        "headTiltZ": -0.11,
+        "shoulderLift": 0.02,
+        "clip": "hands_on_hips"
+      }
+    },
+    {
+      "id": "synth_attentive_focus_03",
+      "context": "reading_screen",
+      "morphs": {
+        "relaxed": 0.65,
+        "surprised": 0.18,
+        "browInnerUp": 0.25
+      },
+      "secondary_bones": {
+        "jawOpen": 0.0,
+        "pupilScale": 1.08,
+        "browAsymmetry": 0.03
+      },
+      "body_posture": {
+        "spinePitch": 0.11,
+        "headTiltZ": 0.06,
+        "shoulderLift": -0.02,
+        "clip": "leaning_reach"
+      }
+    },
+    {
+      "id": "test_evo_1",
+      "emotion": "joy",
+      "posture": "confident_sway"
+    }
+  ]
+}

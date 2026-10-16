@@ -1,3 +1,4 @@
+import math
 import time
 import random
 import subprocess
@@ -6,6 +7,8 @@ from typing import Optional, List, Dict, Any
 from PyQt6.QtCore import QObject, QTimer, QRect
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QApplication
+from src.perception.actuator import Actuator
+from src.visual.two_bone_ik import TwoBoneIKSolver
 
 class ScreenInteractor(QObject):
     def __init__(self, overlay):
@@ -14,6 +17,9 @@ class ScreenInteractor(QObject):
         self.autonomous_clicks_enabled = False
         self.is_currently_perched = False
         self.current_perched_window = None
+        self.close_panic_active = False
+        self.actuator = Actuator(execute_real=True)
+        self.hand_ik_solver = TwoBoneIKSolver(l1=0.28, l2=0.26)
 
         self.mouse_tracking_enabled = self.overlay.brain.personality.get("mouse_tracking", True)
         self.mouse_track_timer = QTimer(self)
@@ -21,11 +27,50 @@ class ScreenInteractor(QObject):
         if self.mouse_tracking_enabled:
             self.mouse_track_timer.start(90)
 
+    def _check_perched_window_state(self, cx: Optional[float], cy: Optional[float]):
+        if not self.is_currently_perched or not self.current_perched_window:
+            return
+        ov = self.overlay
+        target_addr = str(self.current_perched_window.get("address", "")).lower()
+        wins = self.get_hyprland_windows()
+        matched = None
+        for w in wins:
+            if str(w.get("address", "")).lower() == target_addr:
+                matched = w
+                break
+        if not matched:
+            self.is_currently_perched = False
+            self.current_perched_window = None
+            if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
+                ov.vrm_widget.set_reading_mode(False)
+                ov.vrm_widget.set_perched(False)
+                ov.vrm_widget.trigger_window_close_panic(False)
+            if hasattr(ov, "physics_engine") and ov.physics_engine:
+                ov.physics_engine.release_drag(float(ov.x()), float(ov.y()))
+            return
+
+        self.current_perched_window = matched
+        if cx is not None and cy is not None:
+            wx = float(matched.get("x", 0))
+            wy = float(matched.get("y", 0))
+            ww = float(matched.get("w", 0))
+            close_btn_x = wx + ww - 24.0
+            close_btn_y = wy + 18.0
+            dist_to_close = math.hypot(cx - close_btn_x, cy - close_btn_y)
+            if dist_to_close < 70.0:
+                if not self.close_panic_active:
+                    self.close_panic_active = True
+                    if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "trigger_window_close_panic"):
+                        ov.vrm_widget.trigger_window_close_panic(True)
+                    ov.show_balloon("¡Nooo Amo Víctor, no cierre esta ventana que me caigo! 😱💦", duration_ms=3000)
+            elif self.close_panic_active:
+                self.close_panic_active = False
+                if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "trigger_window_close_panic"):
+                    ov.vrm_widget.trigger_window_close_panic(False)
+
     def track_cursor_for_vrm(self):
         ov = self.overlay
         if not getattr(ov, "using_vrm", False) or not hasattr(ov, "vrm_widget") or not self.mouse_tracking_enabled:
-            return
-        if self.is_currently_perched:
             return
         try:
             cx, cy = None, None
@@ -38,6 +83,9 @@ class ScreenInteractor(QObject):
                 parts = [p.strip() for p in out.strip().split(",")]
                 if len(parts) == 2:
                     cx, cy = float(parts[0]), float(parts[1])
+            if self.is_currently_perched:
+                self._check_perched_window_state(cx, cy)
+                return
             if cx is not None and cy is not None:
                 vx = ov.x() + (ov.width() / 2.0)
                 vy = ov.y() + (ov.height() / 2.0)
@@ -580,12 +628,70 @@ class ScreenInteractor(QObject):
         ov = self.overlay
         ov.wake_up()
         if target_x is not None and target_y is not None:
+            self._apply_ik_hand_reach(target_x, target_y)
             if reason:
                 ov.show_balloon(f"🖱️ {reason}", duration_ms=3000)
             res = ov.os_interact.click_at(target_x, target_y, button=button, double=double, smooth=True)
         else:
             res = ov.os_interact.click_mouse(button=button, double=double)
         ov.show_balloon(res, duration_ms=3000)
+
+    def _apply_ik_hand_reach(self, target_x: int, target_y: int) -> Dict[str, Any]:
+        ov = self.overlay
+        shoulder_x = float(ov.x() + ov.width() * 0.5)
+        shoulder_y = float(ov.y() + ov.height() * 0.35)
+        rel_dx = (float(target_x) - shoulder_x) / 300.0
+        rel_dy = (shoulder_y - float(target_y)) / 300.0
+        p_root, p_elbow, p_wrist = self.hand_ik_solver.solve(
+            [0.0, 0.0, 0.0],
+            [rel_dx, rel_dy, 0.15],
+            [0.0, -0.2, 0.3]
+        )
+        crouch = max(0.0, min(0.85, -rel_dy * 0.5)) if rel_dy < -0.15 else 0.0
+        tiptoe = max(0.0, min(0.85, rel_dy * 0.5)) if rel_dy > 0.15 else 0.0
+        if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
+            if hasattr(ov.vrm_widget, "set_vertical_posture_offset"):
+                ov.vrm_widget.set_vertical_posture_offset(crouch, tiptoe)
+                QTimer.singleShot(1400, lambda: ov.vrm_widget.set_vertical_posture_offset(0.0, 0.0))
+            ov.vrm_widget.play_gesture("press_button")
+        return {
+            "elbow": p_elbow.tolist(),
+            "wrist": p_wrist.tolist(),
+            "crouch_depth": crouch,
+            "tiptoe_height": tiptoe,
+        }
+
+    def lie_down_on_window_border(self, window_info: Optional[Dict[str, Any]] = None):
+        self.perch_on_window_border(window_info=window_info, style="lie_down")
+
+    def shake_active_window(self, amplitude: int = 12, cycles: int = 3) -> Dict[str, Any]:
+        ov = self.overlay
+        ov.wake_up()
+        if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
+            ov.vrm_widget.play_gesture("push_window")
+            ov.vrm_widget.set_expression("playful", 0.95)
+        res = self.actuator.shake_active_window(amplitude=amplitude, cycles=cycles)
+        ov.show_balloon("¡Jeje! Sacudiendo un poquito tu ventana para llamar tu atención, Amo Víctor~ 💫✨", duration_ms=3500)
+        return res
+
+    def reach_and_actuate_control(
+        self,
+        target_x: int,
+        target_y: int,
+        action: str = "click",
+        media_cmd: str = "play-pause",
+        scroll_delta: int = -3
+    ) -> Dict[str, Any]:
+        ik_info = self._apply_ik_hand_reach(target_x, target_y)
+        if action == "media":
+            act_res = self.actuator.execute_media_control(media_cmd)
+        elif action == "scroll":
+            self.actuator.inject_pointer_move(target_x, target_y, absolute=True)
+            act_res = self.actuator.inject_scroll(scroll_delta)
+        else:
+            self.actuator.inject_pointer_move(target_x, target_y, absolute=True)
+            act_res = self.actuator.inject_pointer_click(0xC0)
+        return {"ik": ik_info, "actuation": act_res}
 
     def click_active_window_action(self, part: str = "center"):
         ov = self.overlay

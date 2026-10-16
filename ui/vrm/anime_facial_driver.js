@@ -13,6 +13,23 @@ export class AnimeFacialDriver {
         this.leftPupilOffset = new THREE.Vector2(0, 0);
         this.rightPupilOffset = new THREE.Vector2(0, 0);
         this.targetPupilOffset = new THREE.Vector2(0, 0);
+        this.pupilScale = 1.0;
+        this.targetPupilScale = 1.0;
+
+        this.secondaryFacialBones = {
+            jaw: null,
+            tongue: null,
+            leftCheek: null,
+            rightCheek: null,
+            leftEye: null,
+            rightEye: null
+        };
+        this.targetSecondaryState = {
+            jawPitch: 0.0,
+            tongueOut: 0.0,
+            cheekPuff: 0.0,
+            browAsymmetry: 0.0
+        };
 
         this.meshMorphMap = new Map();
         this.supportedExpressions = new Set();
@@ -22,6 +39,9 @@ export class AnimeFacialDriver {
         this.nextMicroBlink = 3.2;
         this.microBrowOffset = 0.0;
         this.microSmileOffset = 0.0;
+
+        this.learnedExpressions = [];
+        this.onLearnedBehaviorSynthesized = null;
 
         this.asymmetricPresets = {
             smug: {
@@ -78,27 +98,84 @@ export class AnimeFacialDriver {
                 relaxed: 0.35,
                 blinkRight: 0.18,
                 Fcl_BRW_Joy: 0.3
+            },
+            cat_smile: {
+                happy: 0.75,
+                relaxed: 0.50,
+                blinkLeft: 0.15,
+                _mouthPress_CatMouth: 0.70
             }
         };
 
         this.aliasMap = {
-            joy: ['happy', 'Joy', 'joy', 'Fcl_ALL_Joy', 'Fcl_EYE_Joy', 'Fcl_MTH_Joy'],
-            happy: ['happy', 'Joy', 'joy', 'Fcl_ALL_Joy', 'Fcl_EYE_Joy', 'Fcl_MTH_Joy'],
-            fun: ['relaxed', 'Fun', 'fun', 'Fcl_ALL_Fun', 'Fcl_MTH_Fun'],
-            relaxed: ['relaxed', 'Fun', 'fun', 'Fcl_ALL_Fun', 'Fcl_MTH_Fun'],
-            angry: ['angry', 'Angry', 'Fcl_ALL_Angry', 'Fcl_BRW_Angry', 'Fcl_MTH_Angry'],
-            sorrow: ['sad', 'Sorrow', 'sorrow', 'Fcl_ALL_Sorrow', 'Fcl_BRW_Sorrow'],
-            sad: ['sad', 'Sorrow', 'sorrow', 'Fcl_ALL_Sorrow', 'Fcl_BRW_Sorrow'],
-            surprised: ['surprised', 'Surprised', 'Fcl_ALL_Surprised', 'Fcl_EYE_Surprised'],
-            blink: ['blink', 'Blink', 'Fcl_EYE_Close'],
-            blinkleft: ['blinkLeft', 'Blink_L', 'blink_l', 'Fcl_EYE_Close_L'],
-            blinkright: ['blinkRight', 'Blink_R', 'blink_r', 'Fcl_EYE_Close_R'],
-            aa: ['aa', 'A', 'Fcl_MTH_A'],
-            ih: ['ih', 'I', 'Fcl_MTH_I'],
-            ou: ['ou', 'U', 'Fcl_MTH_U'],
-            ee: ['ee', 'E', 'Fcl_MTH_E'],
-            oh: ['oh', 'O', 'Fcl_MTH_O']
+            joy: ['happy', 'Joy', 'joy', 'Fcl_ALL_Joy', 'Fcl_EYE_Joy', 'Fcl_MTH_Joy', '笑顔', '笑い', 'にこり'],
+            happy: ['happy', 'Joy', 'joy', 'Fcl_ALL_Joy', 'Fcl_EYE_Joy', 'Fcl_MTH_Joy', '笑顔', '笑い', 'にこり'],
+            fun: ['relaxed', 'Fun', 'fun', 'Fcl_ALL_Fun', 'Fcl_MTH_Fun', 'なごみ'],
+            relaxed: ['relaxed', 'Fun', 'fun', 'Fcl_ALL_Fun', 'Fcl_MTH_Fun', 'なごみ', '穏やか'],
+            angry: ['angry', 'Angry', 'Fcl_ALL_Angry', 'Fcl_BRW_Angry', 'Fcl_MTH_Angry', '怒り'],
+            sorrow: ['sad', 'Sorrow', 'sorrow', 'Fcl_ALL_Sorrow', 'Fcl_BRW_Sorrow', '困る', '悲しい'],
+            sad: ['sad', 'Sorrow', 'sorrow', 'Fcl_ALL_Sorrow', 'Fcl_BRW_Sorrow', '困る', '悲しい'],
+            surprised: ['surprised', 'Surprised', 'Fcl_ALL_Surprised', 'Fcl_EYE_Surprised', 'びっくり', '驚き'],
+            blink: ['blink', 'Blink', 'Fcl_EYE_Close', 'まばたき'],
+            blinkleft: ['blinkLeft', 'Blink_L', 'blink_l', 'Fcl_EYE_Close_L', 'ウィンク'],
+            blinkright: ['blinkRight', 'Blink_R', 'blink_r', 'Fcl_EYE_Close_R', 'ウィンク右'],
+            aa: ['aa', 'A', 'Fcl_MTH_A', 'あ'],
+            ih: ['ih', 'I', 'Fcl_MTH_I', 'い'],
+            ou: ['ou', 'U', 'Fcl_MTH_U', 'う'],
+            ee: ['ee', 'E', 'Fcl_MTH_E', 'え'],
+            oh: ['oh', 'O', 'Fcl_MTH_O', 'お']
         };
+
+        this.loadLearnedBehaviors();
+    }
+
+    loadLearnedBehaviors() {
+        if (typeof fetch !== 'function') return;
+        fetch('/config/learned_behaviors.json')
+            .then(r => (r && r.ok ? r.json() : null))
+            .then(data => {
+                if (data && Array.isArray(data.learned_expressions)) {
+                    this.learnedExpressions = data.learned_expressions;
+                    for (const item of data.learned_expressions) {
+                        if (item && item.id && item.morphs) {
+                            this.asymmetricPresets[item.id] = item.morphs;
+                        }
+                    }
+                }
+            })
+            .catch(() => {});
+    }
+
+    synthesizeEvolutionaryPreset(basePresetName, intensity = 1.0) {
+        const base = this.asymmetricPresets[basePresetName] || this.asymmetricPresets.smug;
+        const jitter = () => (Math.random() - 0.5) * 0.14;
+        const morphs = {};
+        for (const [k, v] of Object.entries(base)) {
+            morphs[k] = Number(Math.max(0.0, Math.min(1.0, (v + jitter()) * intensity)).toFixed(3));
+        }
+        const id = `synth_${basePresetName}_${Date.now()}`;
+        this.asymmetricPresets[id] = morphs;
+        const entry = {
+            id,
+            context: basePresetName,
+            morphs,
+            secondary_bones: {
+                jawOpen: Number((Math.max(0, morphs.aa || 0) * 0.25).toFixed(3)),
+                pupilScale: Number((1.0 + (morphs.surprised || 0) * 0.15).toFixed(3)),
+                browAsymmetry: Number(jitter().toFixed(3))
+            },
+            body_posture: {
+                spinePitch: Number((jitter() * 0.4).toFixed(3)),
+                headTiltZ: Number((jitter() * 0.6).toFixed(3)),
+                shoulderLift: Number((Math.abs(jitter()) * 0.3).toFixed(3)),
+                clip: 'idle_loop'
+            }
+        };
+        this.learnedExpressions.push(entry);
+        if (typeof this.onLearnedBehaviorSynthesized === 'function') {
+            this.onLearnedBehaviorSynthesized(entry);
+        }
+        return entry;
     }
 
     setVrm(vrm) {
@@ -107,10 +184,33 @@ export class AnimeFacialDriver {
         this.currentMorphs.clear();
         this.meshMorphMap.clear();
         this.supportedExpressions.clear();
+        this.secondaryFacialBones = { jaw: null, tongue: null, leftCheek: null, rightCheek: null, leftEye: null, rightEye: null };
         if (!vrm) return;
 
         this.catalogModelExpressions(vrm);
+        this.catalogSecondaryFacialBones(vrm);
         this.optimizeMToonNormals(vrm);
+    }
+
+    catalogSecondaryFacialBones(vrm) {
+        if (!vrm || !vrm.scene) return;
+        vrm.scene.traverse((node) => {
+            if (!node.isBone || !node.name) return;
+            const lower = node.name.toLowerCase();
+            if (lower.includes('jaw') || node.name.includes('あご') || node.name.includes('顎')) {
+                this.secondaryFacialBones.jaw = node;
+            } else if (lower.includes('tongue') || node.name.includes('舌')) {
+                this.secondaryFacialBones.tongue = node;
+            } else if (lower.includes('cheek') && (lower.includes('l') || node.name.includes('左'))) {
+                this.secondaryFacialBones.leftCheek = node;
+            } else if (lower.includes('cheek') && (lower.includes('r') || node.name.includes('右'))) {
+                this.secondaryFacialBones.rightCheek = node;
+            } else if (lower.includes('eye') && (lower.includes('l') || node.name.includes('左目'))) {
+                this.secondaryFacialBones.leftEye = node;
+            } else if (lower.includes('eye') && (lower.includes('r') || node.name.includes('右目'))) {
+                this.secondaryFacialBones.rightEye = node;
+            }
+        });
     }
 
     catalogModelExpressions(vrm) {
@@ -133,7 +233,7 @@ export class AnimeFacialDriver {
             ];
             candidateNames.forEach(name => {
                 try {
-                    const track = expMgr.getExpression(name);
+                    const track = expMgr.getExpression ? expMgr.getExpression(name) : null;
                     if (track) {
                         this.supportedExpressions.add(name.toLowerCase());
                     }
@@ -182,6 +282,44 @@ export class AnimeFacialDriver {
         for (const [morphKey, targetVal] of Object.entries(preset)) {
             this.setMorph(morphKey, targetVal * factor, factor >= this.snapThreshold);
         }
+        if (name === 'shocked') {
+            this.targetPupilScale = 0.82;
+            this.targetSecondaryState.jawPitch = 0.18 * factor;
+        } else if (name === 'smug' || name === 'cat_smile') {
+            this.targetPupilScale = 1.08;
+            this.targetSecondaryState.cheekPuff = 0.12 * factor;
+        } else {
+            this.targetPupilScale = 1.0;
+            this.targetSecondaryState.jawPitch = 0.0;
+        }
+        this.applyCoordinatedBodyPosture(name, factor);
+    }
+
+    applyCoordinatedBodyPosture(presetName, factor = 1.0) {
+        if (!this.vrm || !this.vrm.humanoid) return;
+        const getBone = (bName) => this.vrm.humanoid.getNormalizedBoneNode(bName) || this.vrm.humanoid.getRawBoneNode(bName);
+        const spine = getBone('spine');
+        const chest = getBone('chest');
+        const head = getBone('head');
+        const lShoulder = getBone('leftShoulder');
+        const rShoulder = getBone('rightShoulder');
+        const hips = getBone('hips');
+
+        if (presetName === 'shocked' || presetName === 'surprised') {
+            if (spine) spine.rotation.x -= 0.06 * factor;
+            if (chest) chest.rotation.x += 0.05 * factor;
+            if (lShoulder) lShoulder.rotation.z -= 0.04 * factor;
+            if (rShoulder) rShoulder.rotation.z += 0.04 * factor;
+        } else if (presetName === 'smug' || presetName === 'dramatic_smirk') {
+            if (hips) hips.rotation.z += 0.03 * factor;
+            if (spine) spine.rotation.x -= 0.03 * factor;
+            if (head) head.rotation.z -= 0.06 * factor;
+        } else if (presetName === 'pout' || presetName === 'embarrassed') {
+            if (spine) spine.rotation.x += 0.04 * factor;
+            if (head) head.rotation.x += 0.05 * factor;
+            if (lShoulder) lShoulder.rotation.z += 0.03 * factor;
+            if (rShoulder) rShoulder.rotation.z -= 0.03 * factor;
+        }
     }
 
     setMorph(name, weight, snap = false) {
@@ -218,6 +356,22 @@ export class AnimeFacialDriver {
 
         this.leftPupilOffset.lerp(this.targetPupilOffset, Math.min(1.0, safeDt * 24.0));
         this.rightPupilOffset.lerp(this.targetPupilOffset, Math.min(1.0, safeDt * 24.0));
+        this.pupilScale = THREE.MathUtils.damp(this.pupilScale, this.targetPupilScale, 10.0, safeDt);
+
+        if (this.secondaryFacialBones.jaw) {
+            this.secondaryFacialBones.jaw.rotation.x = THREE.MathUtils.damp(
+                this.secondaryFacialBones.jaw.rotation.x,
+                this.targetSecondaryState.jawPitch,
+                12.0,
+                safeDt
+            );
+        }
+        if (this.secondaryFacialBones.leftEye && this.secondaryFacialBones.leftEye.scale) {
+            this.secondaryFacialBones.leftEye.scale.setScalar(this.pupilScale);
+        }
+        if (this.secondaryFacialBones.rightEye && this.secondaryFacialBones.rightEye.scale) {
+            this.secondaryFacialBones.rightEye.scale.setScalar(this.pupilScale);
+        }
 
         this.microTimer += safeDt;
         this.microBrowOffset = Math.sin(this.microTimer * 0.8) * 0.04;

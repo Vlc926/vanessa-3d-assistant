@@ -215,11 +215,32 @@ export class FootIKSolver {
         }
     }
 
+    syncLocomotionStep(vx, vy, stridePhase) {
+        const speed = Math.hypot(Number(vx) || 0.0, Number(vy) || 0.0);
+        this.isLocomoting = speed > 1.5;
+        this.locomotionSpeed = speed;
+        this.stridePhase = Number(stridePhase) || 0.0;
+        if (this.isLocomoting && !this.isPerched) {
+            this.targetIkWeight = 0.90;
+        }
+    }
+
+    setVerticalPostureOffset(crouchDepth = 0.0, tiptoeHeight = 0.0) {
+        this.crouchDepth = Math.max(0.0, Math.min(0.35, Number(crouchDepth) || 0.0));
+        this.tiptoeHeight = Math.max(0.0, Math.min(0.18, Number(tiptoeHeight) || 0.0));
+    }
+
+    triggerLandingCompression(intensity = 1.0) {
+        this.landingCompression = Math.max(0.0, Math.min(0.28, Number(intensity) * 0.16));
+    }
+
     update(dt) {
         if (!this.enabled || !this.vrm || !this.vrm.scene) return;
 
-        if (!this.isPerched) {
+        if (this.isPerched) {
             this.targetIkWeight = 0.0;
+        } else if (this.targetIkWeight < 0.5) {
+            this.targetIkWeight = 0.85;
         }
 
         if (this.ikWeight !== this.targetIkWeight) {
@@ -231,12 +252,7 @@ export class FootIKSolver {
             }
         }
 
-        if (this.ikWeight < 0.01) {
-            this.leftPlanted = false;
-            this.rightPlanted = false;
-            return;
-        }
-        if (this.isPerched) {
+        if (this.ikWeight < 0.01 || this.isPerched) {
             this.leftPlanted = false;
             this.rightPlanted = false;
             return;
@@ -263,12 +279,18 @@ export class FootIKSolver {
         this.rightLastY = pRightFoot.y;
 
         if (this.isLocomoting) {
-            this.leftPlanted = false;
-            this.rightPlanted = false;
+            const phase = this.stridePhase || 0.0;
+            const leftSwing = Math.sin(phase);
+            const rightSwing = Math.sin(phase + Math.PI);
+            this.leftPlanted = leftSwing <= 0.0;
+            this.rightPlanted = rightSwing <= 0.0;
             leftTarget.copy(pLeftFoot);
             rightTarget.copy(pRightFoot);
-            leftTarget.y = Math.max(this.floorY, pLeftFoot.y);
-            rightTarget.y = Math.max(this.floorY, pRightFoot.y);
+            const liftScale = Math.min(1.3, Math.max(0.5, (this.locomotionSpeed || 150.0) / 160.0));
+            leftTarget.y = this.floorY + Math.max(0.0, leftSwing) * 0.065 * liftScale;
+            rightTarget.y = this.floorY + Math.max(0.0, rightSwing) * 0.065 * liftScale;
+            leftTarget.z += leftSwing * 0.08 * liftScale;
+            rightTarget.z += rightSwing * 0.08 * liftScale;
         } else {
             if (leftDistFloor <= this.groundThreshold && leftVelY <= 0.05) {
                 if (!this.leftPlanted) {
@@ -354,6 +376,16 @@ export class FootIKSolver {
             if (lowestTargetY > this.floorY + 0.01) {
                 targetHipsOffset = lowestTargetY - this.floorY;
             }
+        }
+        if (this.landingCompression && this.landingCompression > 0.001) {
+            targetHipsOffset -= this.landingCompression;
+            this.landingCompression = Math.max(0.0, this.landingCompression - dt * 0.45);
+        }
+        if (this.crouchDepth) {
+            targetHipsOffset -= this.crouchDepth;
+        }
+        if (this.tiptoeHeight) {
+            targetHipsOffset += this.tiptoeHeight;
         }
         this.hipsOffset += (targetHipsOffset - this.hipsOffset) * Math.min(1.0, dt * 8.0);
         if (this.hips) {

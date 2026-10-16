@@ -1,9 +1,71 @@
 import * as THREE from 'three';
 
+export class SpringDamper {
+  constructor(stiffness = 190.0, damping = 14.0) {
+    this.stiffness = stiffness;
+    this.damping = damping;
+    this.value = 0.0;
+    this.velocity = 0.0;
+    this.target = 0.0;
+  }
+
+  impulse(force) {
+    this.velocity += Number(force) || 0.0;
+  }
+
+  step(dt) {
+    const safeDt = Math.min(0.033, Math.max(0.001, dt));
+    const displacement = this.value - this.target;
+    const springForce = -this.stiffness * displacement;
+    const dampingForce = -this.damping * this.velocity;
+    const acceleration = springForce + dampingForce;
+    this.velocity += acceleration * safeDt;
+    this.value += this.velocity * safeDt;
+    return this.value;
+  }
+}
+
+export class SmartLocomotionRouter {
+  static evaluateRoute(distancePx, urgency = 0.2, tone = 'relaxed', windowGaps = 0) {
+    const dist = Math.max(0.0, Number(distancePx) || 0.0);
+    const urg = Math.max(0.0, Math.min(1.0, Number(urgency) || 0.0));
+    const toneLower = String(tone || 'relaxed').toLowerCase();
+    const isUrgentTone = ['urgent', 'immediate', 'alert', 'panic', 'high', 'fast'].includes(toneLower);
+
+    if (windowGaps > 0 && dist >= 300.0 && dist < 900.0 && !isUrgentTone && urg < 0.70) {
+      return {
+        mode: 'HYBRID_INTERLEAVED',
+        anticipationSec: 0.06,
+        transitionSec: 0.12,
+        strideFreq: 2.4,
+        clip: 'walk_forward'
+      };
+    }
+    if (isUrgentTone || urg >= 0.70 || dist >= 650.0) {
+      return {
+        mode: 'TELEPORT_TRANSITION',
+        anticipationSec: 0.08,
+        transitionSec: 0.12,
+        strideFreq: 3.2,
+        clip: 'jump'
+      };
+    }
+    const mode = (dist < 420.0 && urg < 0.45) ? 'WALK' : 'JOG';
+    return {
+      mode,
+      anticipationSec: 0.0,
+      transitionSec: Math.max(0.35, dist / (mode === 'WALK' ? 165.0 : 240.0)),
+      strideFreq: mode === 'WALK' ? 1.85 : 2.65,
+      clip: 'walk_forward'
+    };
+  }
+}
+
 export class AnimationEngine {
   constructor() {
     this.avatar = null;
     this.cognitiveState = 'IDLE';
+    this.physicalState = 'GROUNDED';
 
     this.breathTime = 0.0;
     this.breathFreq = 0.25;
@@ -50,16 +112,62 @@ export class AnimationEngine {
     this.visemeWeights = { aa: 0.0, ih: 0.0, ou: 0.0, ee: 0.0, oh: 0.0 };
 
     this.perlinSeed = Math.random() * 100.0;
+
+    this.torsoSpring = new SpringDamper(210.0, 13.5);
+    this.hipsSpring = new SpringDamper(195.0, 14.0);
+    this.limbsSpring = new SpringDamper(220.0, 15.0);
+
+    this.locomotionSpeedPx = 0.0;
+    this.locomotionVx = 0.0;
+    this.locomotionVy = 0.0;
+    this.stridePhase = 0.0;
+    this.isWindowMoving = false;
+    this.teleportPhaseTimer = 0.0;
+    this.teleportMode = null;
+
+    this.dragAirTime = 0.0;
+    this.freeFallVelocityY = 0.0;
+    this.landingTimer = 0.0;
+    this.headpatActive = false;
+    this.headpatTimer = 0.0;
+    this.windowPanicActive = false;
+    this.perchStyle = 'none';
+
+    this.fullBodyArticulation = null;
+    this.learnedBehaviors = [];
+    this.activeLearnedBehavior = null;
+    this.onSaveLearnedBehavior = null;
+    this._loadLearnedBehaviors();
+  }
+
+  _loadLearnedBehaviors() {
+    if (typeof fetch !== 'function') return;
+    fetch('/config/learned_behaviors.json')
+      .then((res) => (res && res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.learned_expressions)) {
+          this.learnedBehaviors = data.learned_expressions;
+        }
+      })
+      .catch(() => {});
   }
 
   setAvatar(avatar) {
     this.avatar = avatar;
+    if (avatar && avatar.profile) {
+      this.torsoSpring.stiffness = avatar.profile.springStiffness || 210.0;
+      this.torsoSpring.damping = avatar.profile.springDamping || 14.5;
+    }
+    this.torsoSpring.impulse(0.35);
+    this.hipsSpring.impulse(0.25);
   }
 
   setDirective(directive) {
     if (!directive || typeof directive !== 'object') return;
     if (directive.state) {
       this.cognitiveState = String(directive.state).toUpperCase();
+      this.torsoSpring.impulse(0.42);
+      this.hipsSpring.impulse(0.30);
     }
     if (directive.emotion_vector) {
       for (const [k, v] of Object.entries(directive.emotion_vector)) {
@@ -67,6 +175,16 @@ export class AnimationEngine {
           this.targetEmotion[k] = Math.max(0.0, Math.min(1.0, Number(v) || 0.0));
         }
       }
+      this.limbsSpring.impulse(0.38);
+    }
+    if (directive.full_body_articulation) {
+      this.fullBodyArticulation = directive.full_body_articulation;
+    }
+    if (directive.locomotion_route) {
+      this.applyLocomotionRoute(directive.locomotion_route);
+    }
+    if (directive.learned_behaviors && Array.isArray(directive.learned_behaviors)) {
+      this.learnedBehaviors = directive.learned_behaviors;
     }
     if (directive.body_gesture) {
       this.playGesture(directive.body_gesture, 3.2);
@@ -81,6 +199,103 @@ export class AnimationEngine {
     if (directive.audio_base64 && typeof directive.audio_base64 === 'string') {
       this.playAudioBase64(directive.audio_base64);
     }
+    this.synthesizeAndLearnBehavior(directive);
+  }
+
+  synthesizeAndLearnBehavior(directive) {
+    if (!directive || (!directive.emotion_vector && !directive.dialogue_text)) return null;
+    const emo = this.targetEmotion;
+    const id = `synth_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const synthesized = {
+      id,
+      context: String(directive.state || 'SPEAKING').toLowerCase(),
+      morphs: {
+        happy: Number((emo.joy * 0.85 + emo.confidence * 0.15).toFixed(3)),
+        surprised: Number((emo.surprise * 0.80 + emo.curiosity * 0.35).toFixed(3)),
+        relaxed: Number((emo.confidence * 0.55).toFixed(3)),
+        shy: Number((emo.shyness * 0.90).toFixed(3))
+      },
+      secondary_bones: {
+        jawOpen: Number((emo.surprise * 0.14).toFixed(3)),
+        pupilScale: Number((1.0 + emo.curiosity * 0.15 - emo.tension * 0.10).toFixed(3)),
+        browAsymmetry: Number(((emo.curiosity - emo.tension) * 0.12).toFixed(3))
+      },
+      body_posture: {
+        spinePitch: Number((emo.curiosity * 0.08 - emo.surprise * 0.06 + emo.shyness * 0.04).toFixed(3)),
+        headTiltZ: Number(((emo.curiosity * 0.11) * (Math.random() > 0.5 ? 1 : -1)).toFixed(3)),
+        shoulderLift: Number((emo.surprise * 0.05 + emo.shyness * 0.04).toFixed(3)),
+        clip: directive.body_gesture || 'talking'
+      }
+    };
+    this.activeLearnedBehavior = synthesized;
+    this.learnedBehaviors.push(synthesized);
+    if (this.learnedBehaviors.length > 120) {
+      this.learnedBehaviors.shift();
+    }
+    if (typeof this.onSaveLearnedBehavior === 'function') {
+      this.onSaveLearnedBehavior(synthesized);
+    }
+    return synthesized;
+  }
+
+  applyLocomotionRoute(route) {
+    if (!route) return;
+    const mode = route.locomotion_mode || route.mode || 'WALK';
+    this.teleportMode = mode;
+    if (mode === 'TELEPORT_TRANSITION' || mode === 'HYBRID_INTERLEAVED') {
+      this.teleportPhaseTimer = (route.anticipation_sec || 0.08) + (route.transition_sec || 0.12);
+      this.torsoSpring.impulse(-1.35);
+      this.hipsSpring.impulse(-1.20);
+      this.limbsSpring.impulse(0.95);
+    }
+  }
+
+  syncLocomotionStep(x, y, vx, vy, stridePhase) {
+    this.locomotionVx = Number(vx) || 0.0;
+    this.locomotionVy = Number(vy) || 0.0;
+    this.locomotionSpeedPx = Math.hypot(this.locomotionVx, this.locomotionVy);
+    this.isWindowMoving = this.locomotionSpeedPx > 1.5;
+    if (stridePhase !== undefined && stridePhase !== null) {
+      this.stridePhase = Number(stridePhase);
+    }
+  }
+
+  setPhysicalState(state, options = {}) {
+    const prev = this.physicalState;
+    this.physicalState = String(state || 'GROUNDED').toUpperCase();
+    if (this.physicalState === 'DRAGGED_IN_AIR') {
+      this.dragAirTime = 0.0;
+      this.torsoSpring.impulse(0.85);
+    } else if (this.physicalState === 'FREE_FALL') {
+      this.freeFallVelocityY = Number(options.vy) || 250.0;
+    } else if (this.physicalState === 'GROUNDED' && prev === 'FREE_FALL') {
+      this.landingTimer = 0.42;
+      this.torsoSpring.impulse(-1.65);
+      this.hipsSpring.impulse(-1.80);
+      this.limbsSpring.impulse(-1.20);
+    } else if (this.physicalState === 'PERCHED') {
+      this.perchStyle = options.style || 'sit';
+    }
+  }
+
+  triggerHeadpat(active = true) {
+    this.headpatActive = Boolean(active);
+    if (this.headpatActive) {
+      this.headpatTimer = 2.8;
+      this.targetEmotion.joy = 0.92;
+      this.targetEmotion.shyness = 0.55;
+      this.torsoSpring.impulse(0.45);
+    }
+  }
+
+  triggerWindowClosePanic(active = true) {
+    this.windowPanicActive = Boolean(active);
+    if (this.windowPanicActive) {
+      this.targetEmotion.surprise = 0.95;
+      this.targetEmotion.tension = 0.85;
+      this.playGesture('shock', 2.4);
+      this.torsoSpring.impulse(1.25);
+    }
   }
 
   playGesture(name, duration = 3.0) {
@@ -88,6 +303,7 @@ export class AnimationEngine {
     this.gestureDuration = Math.max(0.5, Number(duration) || 3.0);
     this.gestureTime = 0.0;
     this.gestureWeight = 0.0;
+    this.limbsSpring.impulse(0.55);
   }
 
   playAudioBase64(b64) {
@@ -145,9 +361,149 @@ export class AnimationEngine {
     this._updateLayer0Idle(clampedDt);
     this._updateLayer1Cognitive(clampedDt);
     this._updateLayer2Gestures(clampedDt);
+    this._updateLocomotionAndPhysicalStates(clampedDt);
+    this._updateZZZSpringSquashStretch(clampedDt);
     this._updateLayer3LookAtIK(clampedDt);
 
     this.avatar.update(clampedDt);
+  }
+
+  _updateZZZSpringSquashStretch(dt) {
+    const springTorso = this.torsoSpring.step(dt);
+    const springHips = this.hipsSpring.step(dt);
+    const springLimbs = this.limbsSpring.step(dt);
+
+    const intensity = (this.avatar && this.avatar.profile) ? (this.avatar.profile.squashStretchIntensity || 0.55) : 0.55;
+    const spine = this.avatar.getBone('spine');
+    const chest = this.avatar.getBone('chest');
+    const hips = this.avatar.getBone('hips');
+
+    if (spine && spine.scale) {
+      const sy = THREE.MathUtils.clamp(1.0 + springTorso * 0.08 * intensity, 0.88, 1.14);
+      const sxz = THREE.MathUtils.clamp(1.0 / Math.sqrt(sy), 0.90, 1.12);
+      spine.scale.set(sxz, sy, sxz);
+    }
+    if (chest && chest.scale) {
+      const sy = THREE.MathUtils.clamp(1.0 + springTorso * 0.06 * intensity, 0.90, 1.12);
+      const sxz = THREE.MathUtils.clamp(1.0 / Math.sqrt(sy), 0.92, 1.10);
+      chest.scale.set(sxz, sy, sxz);
+    }
+    if (hips && hips.scale) {
+      const sy = THREE.MathUtils.clamp(1.0 + springHips * 0.07 * intensity, 0.88, 1.12);
+      const sxz = THREE.MathUtils.clamp(1.0 / Math.sqrt(sy), 0.90, 1.12);
+      hips.scale.set(sxz, sy, sxz);
+    }
+    if (Math.abs(springLimbs) > 0.002) {
+      const lArm = this.avatar.getBone('leftUpperArm');
+      const rArm = this.avatar.getBone('rightUpperArm');
+      if (lArm) lArm.rotation.z -= springLimbs * 0.04 * intensity;
+      if (rArm) rArm.rotation.z += springLimbs * 0.04 * intensity;
+    }
+  }
+
+  _updateLocomotionAndPhysicalStates(dt) {
+    const hips = this.avatar.getBone('hips');
+    const spine = this.avatar.getBone('spine');
+    const lUpperLeg = this.avatar.getBone('leftUpperLeg');
+    const rUpperLeg = this.avatar.getBone('rightUpperLeg');
+    const lLowerLeg = this.avatar.getBone('leftLowerLeg');
+    const rLowerLeg = this.avatar.getBone('rightLowerLeg');
+    const lFoot = this.avatar.getBone('leftFoot');
+    const rFoot = this.avatar.getBone('rightFoot');
+    const lArm = this.avatar.getBone('leftUpperArm');
+    const rArm = this.avatar.getBone('rightUpperArm');
+    const lForearm = this.avatar.getBone('leftLowerArm');
+    const rForearm = this.avatar.getBone('rightLowerArm');
+
+    if (this.headpatActive) {
+      this.headpatTimer -= dt;
+      this.avatar.setExpression('blink', 0.95);
+      this.avatar.setExpression('joy', 0.90);
+      const head = this.avatar.getBone('head');
+      if (head) {
+        head.rotation.z = THREE.MathUtils.damp(head.rotation.z, Math.sin(this.idleTime * 6.0) * 0.14, 8.0, dt);
+        head.rotation.x = THREE.MathUtils.damp(head.rotation.x, 0.08, 8.0, dt);
+      }
+      if (this.headpatTimer <= 0.0) {
+        this.headpatActive = false;
+      }
+    }
+
+    if (this.physicalState === 'DRAGGED_IN_AIR') {
+      this.dragAirTime += dt;
+      const kick = Math.sin(this.dragAirTime * 14.0);
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.35 + kick * 0.45, 12.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.35 - kick * 0.45, 12.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.55 + Math.max(0, kick) * 0.40, 12.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.55 + Math.max(0, -kick) * 0.40, 12.0, dt);
+      if (lArm) {
+        lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, 0.35, 10.0, dt);
+        lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.45, 10.0, dt);
+      }
+      if (rArm) {
+        rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, 0.35, 10.0, dt);
+        rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.45, 10.0, dt);
+      }
+      if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.40, 10.0, dt);
+      if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.40, 10.0, dt);
+      this.avatar.setExpression('surprised', 0.85);
+      this.avatar.setExpression('shy', 0.75);
+      return;
+    }
+
+    if (this.physicalState === 'FREE_FALL') {
+      if (lArm) lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.25, 10.0, dt);
+      if (rArm) rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.25, 10.0, dt);
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.25, 10.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.15, 10.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.45, 10.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.35, 10.0, dt);
+      this.avatar.setExpression('surprised', 0.95);
+      return;
+    }
+
+    if (this.landingTimer > 0.0) {
+      this.landingTimer = Math.max(0.0, this.landingTimer - dt);
+      const comp = Math.sin((this.landingTimer / 0.42) * Math.PI);
+      if (spine) spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, 0.28 * comp, 14.0, dt);
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.55 * comp, 14.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.55 * comp, 14.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.95 * comp, 14.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.95 * comp, 14.0, dt);
+      return;
+    }
+
+    if (this.physicalState === 'PERCHED') {
+      const swing = Math.sin(this.idleTime * 2.4) * 0.22;
+      if (this.perchStyle === 'lie_down') {
+        if (spine) spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, 0.45, 6.0, dt);
+        if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.40, 6.0, dt);
+        if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.30, 6.0, dt);
+      } else {
+        if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -1.35, 8.0, dt);
+        if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -1.35, 8.0, dt);
+        if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 1.25 + swing, 8.0, dt);
+        if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 1.25 - swing, 8.0, dt);
+      }
+      return;
+    }
+
+    if (this.isWindowMoving) {
+      const speedRatio = Math.min(2.2, Math.max(0.6, this.locomotionSpeedPx / 160.0));
+      this.stridePhase += dt * 5.6 * speedRatio;
+      const stride = Math.sin(this.stridePhase);
+      const oppStride = Math.sin(this.stridePhase + Math.PI);
+
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, stride * 0.46, 14.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, oppStride * 0.46, 14.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, Math.max(0.05, -stride * 0.62), 14.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, Math.max(0.05, -oppStride * 0.62), 14.0, dt);
+      if (lFoot) lFoot.rotation.x = THREE.MathUtils.damp(lFoot.rotation.x, stride * 0.22, 14.0, dt);
+      if (rFoot) rFoot.rotation.x = THREE.MathUtils.damp(rFoot.rotation.x, oppStride * 0.22, 14.0, dt);
+      if (lArm) lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, oppStride * 0.32, 12.0, dt);
+      if (rArm) rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, stride * 0.32, 12.0, dt);
+      if (hips) hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, stride * 0.06, 12.0, dt);
+    }
   }
 
   _updateLayer0Idle(dt) {
@@ -155,20 +511,28 @@ export class AnimationEngine {
     this.idleTime += dt;
 
     const breath = Math.sin(this.breathTime);
-    const breathCos = Math.cos(this.breathTime);
 
     const spine = this.avatar.getBone('spine');
     const chest = this.avatar.getBone('chest');
     const lShoulder = this.avatar.getBone('leftShoulder');
     const rShoulder = this.avatar.getBone('rightShoulder');
     const hips = this.avatar.getBone('hips');
+    const lUpperLeg = this.avatar.getBone('leftUpperLeg');
+    const rUpperLeg = this.avatar.getBone('rightUpperLeg');
+    const lLowerLeg = this.avatar.getBone('leftLowerLeg');
+    const rLowerLeg = this.avatar.getBone('rightLowerLeg');
+
+    const fb = this.fullBodyArticulation;
+    const extraSpinePitch = fb && fb.spine ? (fb.spine.pitch || 0.0) : 0.0;
+    const extraChestPitch = fb && fb.chest ? (fb.chest.pitch || 0.0) : 0.0;
+    const extraKneeFlex = fb && fb.legs ? (fb.legs.knee_flex || 0.05) : 0.05;
 
     if (spine) {
-      spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, breath * 0.022, 6.0, dt);
+      spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, breath * 0.022 + extraSpinePitch, 6.0, dt);
       spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, Math.sin(this.idleTime * 0.7) * 0.015, 4.0, dt);
     }
     if (chest) {
-      chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, breath * 0.035, 6.0, dt);
+      chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, breath * 0.035 + extraChestPitch, 6.0, dt);
     }
     if (lShoulder) {
       lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, -0.04 + breath * 0.015, 5.0, dt);
@@ -181,9 +545,15 @@ export class AnimationEngine {
       hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, hipSway, 4.0, dt);
       hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, hipSway * 0.6, 4.0, dt);
     }
+    if (!this.isWindowMoving && this.physicalState === 'GROUNDED') {
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -extraKneeFlex * 0.5, 5.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -extraKneeFlex * 0.5, 5.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, extraKneeFlex, 5.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, extraKneeFlex, 5.0, dt);
+    }
 
     this.blinkTimer -= dt;
-    if (this.blinkTimer <= 0.0 && !this.isBlinking) {
+    if (this.blinkTimer <= 0.0 && !this.isBlinking && !this.headpatActive) {
       if (this.currentEmotion.joy < 0.70) {
         this.isBlinking = true;
         this.blinkElapsed = 0.0;
@@ -191,7 +561,7 @@ export class AnimationEngine {
         this.blinkTimer = 2.0 + Math.random() * 2.5;
       }
     }
-    if (this.isBlinking) {
+    if (this.isBlinking && !this.headpatActive) {
       this.blinkElapsed += dt;
       const progress = this.blinkElapsed / this.blinkDuration;
       let blinkVal = 0.0;
@@ -210,7 +580,6 @@ export class AnimationEngine {
 
   _updateLayer1Cognitive(dt) {
     const head = this.avatar.getBone('head');
-    const neck = this.avatar.getBone('neck');
     const spine = this.avatar.getBone('spine');
 
     let targetSpinePitch = 0.0;
@@ -234,7 +603,12 @@ export class AnimationEngine {
       this.lookTarget.set(0.0, 0.0, 2.8);
     }
 
-    if (spine && (this.cognitiveState === 'LISTENING' || this.cognitiveState === 'THINKING')) {
+    if (this.activeLearnedBehavior && this.activeLearnedBehavior.body_posture) {
+      targetSpinePitch += this.activeLearnedBehavior.body_posture.spinePitch || 0.0;
+      targetHeadTiltZ += this.activeLearnedBehavior.body_posture.headTiltZ || 0.0;
+    }
+
+    if (spine && (this.cognitiveState === 'LISTENING' || this.cognitiveState === 'THINKING' || this.activeLearnedBehavior)) {
       spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, targetSpinePitch, 5.0, dt);
     }
     if (head) {
@@ -258,13 +632,21 @@ export class AnimationEngine {
       this.activeGesture = 'idle';
     }
 
-    if (this.gestureWeight <= 0.001) return;
-    const w = this.gestureWeight;
-
     const lArm = this.avatar.getBone('leftUpperArm');
     const rArm = this.avatar.getBone('rightUpperArm');
     const lForearm = this.avatar.getBone('leftLowerArm');
     const rForearm = this.avatar.getBone('rightLowerArm');
+
+    if (this.gestureWeight <= 0.001) {
+      if (!this.isWindowMoving && this.physicalState === 'GROUNDED') {
+        if (lArm) lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.70, 5.0, dt);
+        if (rArm) rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.70, 5.0, dt);
+        if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.21, 5.0, dt);
+        if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.21, 5.0, dt);
+      }
+      return;
+    }
+    const w = this.gestureWeight;
 
     if (this.activeGesture === 'explain_open_hands') {
       if (lArm) {
@@ -275,12 +657,8 @@ export class AnimationEngine {
         rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, -0.35, 6.0, dt);
         rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.65, 6.0, dt);
       }
-      if (lForearm) {
-        lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.60, 6.0, dt);
-      }
-      if (rForearm) {
-        rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.60, 6.0, dt);
-      }
+      if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.60, 6.0, dt);
+      if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.60, 6.0, dt);
     } else if (this.activeGesture === 'nod') {
       const head = this.avatar.getBone('head');
       if (head) {
@@ -304,6 +682,11 @@ export class AnimationEngine {
         rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 1.15 * w, 6.0, dt);
         rForearm.rotation.y = THREE.MathUtils.damp(rForearm.rotation.y, 0.35 * w, 6.0, dt);
       }
+    } else if (this.activeGesture === 'shock') {
+      if (lArm) lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.30 * w, 10.0, dt);
+      if (rArm) rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.30 * w, 10.0, dt);
+      if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.90 * w, 10.0, dt);
+      if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.90 * w, 10.0, dt);
     }
   }
 

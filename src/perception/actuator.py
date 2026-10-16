@@ -288,3 +288,43 @@ class Actuator:
             "last_action": self.last_action,
             "status": self.last_status,
         }
+
+    def shake_active_window(self, amplitude: int = 12, cycles: int = 3) -> Dict[str, Any]:
+        steps: List[Dict[str, str]] = []
+        amp = max(2, int(amplitude))
+        for _ in range(max(1, int(cycles))):
+            steps.append(self.move_active(amp, -2))
+            steps.append(self.move_active(-amp * 2, 4))
+            steps.append(self.move_active(amp, -2))
+        self.last_action = f"shake_active_window {amp}x{cycles}"
+        return {"status": self.last_status, "steps": len(steps)}
+
+    def execute_media_control(self, cmd: str = "play-pause") -> Dict[str, str]:
+        safe_cmd = cmd if cmd in ("play", "pause", "play-pause", "next", "previous", "stop") else "play-pause"
+        self.last_action = f"playerctl {safe_cmd}"
+        status = "ok"
+        if self.execute_real:
+            try:
+                proc = subprocess.run(
+                    ["playerctl", safe_cmd],
+                    capture_output=True,
+                    text=True,
+                    timeout=1.0,
+                    check=False,
+                )
+                status = "ok" if proc.returncode == 0 else "error"
+            except Exception as ex:
+                status = str(ex)
+        self.last_status = status
+        return {"status": status, "executed": self.last_action}
+
+    def inject_scroll(self, delta_y: int = -3) -> Dict[str, Any]:
+        entry = {"action": "wheel", "delta_y": int(delta_y)}
+        self.recorded_pointer_events.append(entry)
+        self.last_action = f"wheel {delta_y}"
+        status = "ok"
+        if self.execute_real:
+            ok = self._run_ydotool(["mousemove", "-w", "--", "0", str(int(delta_y))])
+            status = "ok" if ok else self.last_status
+        self.last_status = status
+        return {"status": status, "event": entry}

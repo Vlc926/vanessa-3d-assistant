@@ -247,6 +247,56 @@ class VRMWidget(QWidget):
         js_bool = "true" if perched else "false"
         safe_style = "".join(c for c in perch_style if c.isalnum() or c == "_")
         self._js(f"window.vrmController && window.vrmController.setPerched && window.vrmController.setPerched({js_bool}, '{safe_style}')")
+        if perched:
+            self.set_physical_state("PERCHED", style=safe_style)
+        else:
+            self.set_physical_state("GROUNDED")
+
+    def set_reading_mode(self, reading: bool = True):
+        js_bool = "true" if reading else "false"
+        self._js(f"window.vrmController && window.vrmController.setReadingMode && window.vrmController.setReadingMode({js_bool})")
+
+    def sync_locomotion_step(self, vx: float = 0.0, vy: float = 0.0, stride_phase: float = 0.0):
+        self._run_js_safe(
+            f"window.vrmController && window.vrmController.syncLocomotionStep && "
+            f"window.vrmController.syncLocomotionStep({float(vx):.3f}, {float(vy):.3f}, {float(stride_phase):.4f});"
+        )
+
+    def set_physical_state(self, state: str = "GROUNDED", style: str = "sit", vy: float = 0.0, landing_compression: float = 0.0):
+        import json
+        safe_state = "".join(c for c in state if c.isalnum() or c == "_")
+        opts = json.dumps({"style": style, "vy": float(vy), "landingCompression": float(landing_compression)})
+        self._run_js_safe(
+            f"window.vrmController && window.vrmController.setPhysicalState && "
+            f"window.vrmController.setPhysicalState('{safe_state}', {opts});"
+        )
+
+    def trigger_headpat(self, active: bool = True, cursor_x: float = 0.0):
+        js_bool = "true" if active else "false"
+        self._run_js_safe(
+            f"window.vrmController && window.vrmController.triggerHeadpat && "
+            f"window.vrmController.triggerHeadpat({js_bool}, {float(cursor_x):.3f});"
+        )
+
+    def trigger_window_close_panic(self, active: bool = True):
+        js_bool = "true" if active else "false"
+        self._run_js_safe(
+            f"window.vrmController && window.vrmController.triggerWindowClosePanic && "
+            f"window.vrmController.triggerWindowClosePanic({js_bool});"
+        )
+
+    def set_vertical_posture_offset(self, crouch_depth: float = 0.0, tiptoe_height: float = 0.0):
+        self._run_js_safe(
+            f"window.vrmController && window.vrmController.setVerticalPostureOffset && "
+            f"window.vrmController.setVerticalPostureOffset({float(crouch_depth):.3f}, {float(tiptoe_height):.3f});"
+        )
+
+    def switch_architecture_profile(self, profile_name: str):
+        safe_prof = "".join(c for c in profile_name if c.isalnum() or c == "_")
+        self._run_js_safe(
+            f"window.vrmController && window.vrmController.switchArchitectureProfile && "
+            f"window.vrmController.switchArchitectureProfile('{safe_prof}');"
+        )
 
     def set_avatar_mode(self, mode: str = "standard"):
         safe_mode = "".join(c for c in mode if c.isalnum() or c == "_")
@@ -267,7 +317,10 @@ class VRMWidget(QWidget):
         self.clicked_signal.emit()
         if event.pos().y() < (self.height() * 0.45):
             self.head_pat_signal.emit()
+            rel_x = (event.pos().x() / max(1.0, float(self.width()))) * 2.0 - 1.0
+            self.trigger_headpat(True, rel_x)
             self.start_motion("pat_head")
+            QTimer.singleShot(2200, lambda: self.trigger_headpat(False, 0.0))
         else:
             self.body_click_signal.emit()
         super().mousePressEvent(event)

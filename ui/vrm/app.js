@@ -25,8 +25,8 @@ import { DedicatedPMXController } from './dedicated_pmx_controller.js?v=20261012
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
-import { AnimationEngine } from './AnimationEngine.js';
-import { VRMAvatar, MMDAvatar, loadAvatarModel } from './AvatarAdapter.js';
+import { AnimationEngine, SmartLocomotionRouter } from './AnimationEngine.js';
+import { VRMAvatar, MMDAvatar, loadAvatarModel, detectArchitectureProfile, NaturalBindPoseFix } from './AvatarAdapter.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 20.0);
@@ -373,17 +373,56 @@ export function setThrottling(throttled = false, targetFps = 15.0) {
     throttleFps = Math.max(1.0, Math.min(60.0, Number(targetFps) || 15.0));
 }
 
-function applyCelShading(root) {
+export const ZZZHybridToonShader = {
+    applyToRoot(root, isZZZ = true) {
+        if (!root) return;
+        rimLight.intensity = isZZZ ? 1.42 : 0.95;
+        root.traverse((child) => {
+            if (child.isMesh && child.material) {
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach((mat) => {
+                    const matName = String(mat.name || child.name || '').toLowerCase();
+                    const isSkinOrFace = matName.includes('skin') || matName.includes('face') || matName.includes('body') || matName.includes('肌') || matName.includes('顔');
+                    const isMetalOrLeather = matName.includes('metal') || matName.includes('leather') || matName.includes('cloth') || matName.includes('jacket') || matName.includes('weapon');
+                    if (isZZZ) {
+                        if (isSkinOrFace) {
+                            mat.roughness = 0.85;
+                            mat.metalness = 0.01;
+                            if (mat.emissive) mat.emissive.setRGB(0.032, 0.020, 0.018);
+                        } else if (isMetalOrLeather) {
+                            mat.roughness = 0.20;
+                            mat.metalness = 0.38;
+                            if (mat.emissive) mat.emissive.setRGB(0.018, 0.022, 0.030);
+                        } else {
+                            mat.roughness = 0.26;
+                            mat.metalness = 0.14;
+                        }
+                    } else if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
+                        mat.roughness = Math.max(0.65, mat.roughness);
+                        mat.metalness = Math.min(0.08, mat.metalness);
+                    }
+                });
+            }
+        });
+    }
+};
+
+function applyCelShading(root, profileName = 'VRMProfile') {
     if (!root) return;
-    root.traverse((child) => {
-        if (child.isMesh && child.material) {
-            const mats = Array.isArray(child.material) ? child.material : [child.material];
-            mats.forEach((mat) => {
-                if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
-                    mat.roughness = Math.max(0.65, mat.roughness);
-                    mat.metalness = Math.min(0.08, mat.metalness);
-                }
-            });
+    ZZZHybridToonShader.applyToRoot(root, profileName === 'ZZZAvatarProfile');
+}
+
+let activeArchitectureProfile = 'VRMProfile';
+
+function updateHudProfileTabs(profileName) {
+    activeArchitectureProfile = profileName;
+    document.querySelectorAll('[data-profile]').forEach((btn) => {
+        if (btn.getAttribute('data-profile') === profileName) {
+            btn.style.borderColor = '#38bdf8';
+            btn.style.color = '#38bdf8';
+        } else {
+            btn.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+            btn.style.color = '#f8fafc';
         }
     });
 }
@@ -431,6 +470,8 @@ export function setModel(path) {
     if (!path) return;
     notifyActivity('action');
     triggerHologramTransition(true);
+    const detectedProfile = detectArchitectureProfile(path);
+    updateHudProfileTabs(detectedProfile);
     const modelSelector = document.getElementById('model-selector');
     if (modelSelector && modelSelector.value !== path) {
         modelSelector.value = path;
@@ -457,13 +498,14 @@ export function setModel(path) {
 
         scene.add(newVrm.scene);
         currentVrm = newVrm;
-        currentAvatarAdapter = new VRMAvatar(newVrm);
+        NaturalBindPoseFix(newVrm);
+        currentAvatarAdapter = new VRMAvatar(newVrm, path);
         animationEngine.setAvatar(currentAvatarAdapter);
         baseModelScale = 1.0;
         newVrm.scene.scale.set(baseModelScale * currentScaleFactor, baseModelScale * currentScaleFactor, baseModelScale * currentScaleFactor);
         newVrm.scene.rotation.y = Math.PI;
-        applyCelShading(newVrm.scene);
-        animController.setVrm(newVrm);
+        applyCelShading(newVrm.scene, detectedProfile);
+        animController.setVrm(newVrm, currentAvatarAdapter);
         footIkSolver.setVrm(newVrm);
         animeFxRenderer.setVrm(newVrm);
         chibiModifier.setVrm(newVrm);
@@ -497,7 +539,7 @@ export function setModel(path) {
             }
             baseModelScale = 0.01;
             fbx.scale.setScalar(baseModelScale * currentScaleFactor);
-            applyCelShading(fbx);
+            applyCelShading(fbx, detectedProfile);
             scene.add(fbx);
             currentExternalMesh = fbx;
             triggerHologramTransition(false);
@@ -517,12 +559,19 @@ export function setModel(path) {
                 }
                 scene.add(mmd);
                 currentExternalMesh = mmd;
-                currentAvatarAdapter = new MMDAvatar(mmd, null);
+                currentAvatarAdapter = new MMDAvatar(mmd, null, path);
                 animationEngine.setAvatar(currentAvatarAdapter);
                 const adapted = mmdHumanoidAdapter.adaptModel(mmd);
                 if (adapted) {
                     currentVrm = adapted;
+                    NaturalBindPoseFix(adapted);
                     dedicatedPmxController.applyModelCalibration(path, mmd, adapted, camera);
+                    applyCelShading(mmd, detectedProfile);
+                    animController.setVrm(adapted, currentAvatarAdapter);
+                    footIkSolver.setVrm(adapted);
+                    animeFxRenderer.setVrm(adapted);
+                    squashStretchModifier.setVrm(adapted);
+                    animeFacialDriver.setVrm(adapted);
                 }
                 triggerHologramTransition(false);
                 if (pythonBridge && pythonBridge.on_avatar_ready) {
@@ -635,7 +684,12 @@ function animate() {
             gachaAnimationGraph.setLocomotion(motionMatching.isLocomoting, motionMatching.currentSpeed, motionMatching.targetYaw, motionMatching.facingYaw);
             gachaAnimationGraph.update(dt);
         } else {
+            animController.update(dt);
             dedicatedPmxController.updateProceduralDynamics(dt, currentVrm);
+            animeFacialDriver.update(dt);
+            squashStretchModifier.update(dt);
+            footIkSolver.update(dt);
+            animeFxRenderer.update(dt);
         }
         if (currentVrm.scene) {
             const baseRot = Math.PI;
@@ -837,8 +891,75 @@ window.vrmController = {
     },
     applyExternalPhysicsImpulse: (dx, dy, dt) => {
         springDynamicsTuner.applyExternalImpulse(dx, dy, dt);
+    },
+    syncLocomotionStep: (vx = 0.0, vy = 0.0, stridePhase = 0.0) => {
+        footIkSolver.syncLocomotionStep(vx, vy, stridePhase);
+        animationEngine.syncLocomotionStep(vx, vy, stridePhase, 0, 0);
+    },
+    setPhysicalState: (state, options = {}) => {
+        notifyActivity('action');
+        animationEngine.setPhysicalState(state, options);
+        if (state === 'PERCHED') {
+            const style = options.style || 'sit';
+            footIkSolver.setPerched(true, style);
+            motionMatching.setPerched(true, style);
+        } else if (state === 'FREE_FALL') {
+            footIkSolver.setPerched(false);
+            motionMatching.setPerched(false);
+            springDynamicsTuner.applyExternalImpulse(0.0, -Math.abs(options.vy || 250.0) * 0.05, 0.016);
+        } else if (state === 'DRAGGED_IN_AIR') {
+            footIkSolver.setPerched(false);
+            motionMatching.setPerched(false);
+        } else {
+            footIkSolver.setPerched(false);
+            motionMatching.setPerched(false);
+            if (options.landingCompression) {
+                footIkSolver.triggerLandingCompression(options.landingCompression);
+                squashStretchModifier.triggerSquash(options.landingCompression);
+            }
+        }
+    },
+    triggerHeadpat: (active = true, cursorX = 0.0) => {
+        notifyActivity('action');
+        animationEngine.triggerHeadpat(active, cursorX);
+        if (active) {
+            animeFacialDriver.setAsymmetricPreset('relaxed', 0.95);
+            animeFxRenderer.trigger('sparkle', { duration: 1.5 });
+        }
+    },
+    triggerWindowClosePanic: (active = true) => {
+        notifyActivity('action');
+        animationEngine.triggerWindowClosePanic(active);
+        if (active) {
+            animeFacialDriver.setAsymmetricPreset('panic', 1.0);
+            animeFxRenderer.trigger('exclamation', { duration: 1.4 });
+        }
+    },
+    setVerticalPostureOffset: (crouchDepth = 0.0, tiptoeHeight = 0.0) => {
+        footIkSolver.setVerticalPostureOffset(crouchDepth, tiptoeHeight);
+    },
+    switchArchitectureProfile: (profileName) => {
+        if (currentAvatarAdapter && typeof currentAvatarAdapter.setProfile === 'function') {
+            currentAvatarAdapter.setProfile(profileName);
+            updateHudProfileTabs(profileName);
+        }
     }
 };
+
+function persistLearnedBehavior(behavior) {
+    if (!behavior) return;
+    if (directiveSocket && directiveSocket.readyState === WebSocket.OPEN) {
+        try {
+            directiveSocket.send(JSON.stringify({
+                type: 'save_learned_behavior',
+                behavior
+            }));
+        } catch (e) {}
+    }
+}
+
+animationEngine.onSaveLearnedBehavior = persistLearnedBehavior;
+animeFacialDriver.onLearnedBehaviorSynthesized = persistLearnedBehavior;
 
 function initWebChannel() {
     if (typeof QWebChannel !== 'undefined' && window.qt && window.qt.webChannelTransport) {
@@ -907,6 +1028,15 @@ function initHudControls() {
             toggleBtn.textContent = hudContainer.classList.contains('collapsed') ? '+' : '−';
         });
     }
+
+    document.querySelectorAll('[data-profile]').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            const prof = tab.getAttribute('data-profile');
+            if (prof) {
+                window.vrmController.switchArchitectureProfile(prof);
+            }
+        });
+    });
 
     const modelSelector = document.getElementById('model-selector');
     if (modelSelector) {

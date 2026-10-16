@@ -305,6 +305,10 @@ export class DedicatedPMXController {
         const rArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm') || vrm.humanoid.getRawBoneNode('rightUpperArm');
         const lForearm = vrm.humanoid.getNormalizedBoneNode('leftLowerArm') || vrm.humanoid.getRawBoneNode('leftLowerArm');
         const rForearm = vrm.humanoid.getNormalizedBoneNode('rightLowerArm') || vrm.humanoid.getRawBoneNode('rightLowerArm');
+        const lUpperLeg = vrm.humanoid.getNormalizedBoneNode('leftUpperLeg') || vrm.humanoid.getRawBoneNode('leftUpperLeg');
+        const rUpperLeg = vrm.humanoid.getNormalizedBoneNode('rightUpperLeg') || vrm.humanoid.getRawBoneNode('rightUpperLeg');
+        const lLowerLeg = vrm.humanoid.getNormalizedBoneNode('leftLowerLeg') || vrm.humanoid.getRawBoneNode('leftLowerLeg');
+        const rLowerLeg = vrm.humanoid.getNormalizedBoneNode('rightLowerLeg') || vrm.humanoid.getRawBoneNode('rightLowerLeg');
 
         if (lShoulder) {
             lShoulder.rotation.set(0.02, 0.0, -0.04);
@@ -319,10 +323,22 @@ export class DedicatedPMXController {
             rArm.rotation.set(p.armRight[0], p.armRight[1], p.armRight[2]);
         }
         if (lForearm) {
-            lForearm.rotation.set(p.forearmLeft[0], p.forearmLeft[1], p.forearmLeft[2]);
+            lForearm.rotation.set(p.forearmLeft[0] || 0.21, p.forearmLeft[1], p.forearmLeft[2]);
         }
         if (rForearm) {
-            rForearm.rotation.set(p.forearmRight[0], p.forearmRight[1], p.forearmRight[2]);
+            rForearm.rotation.set(p.forearmRight[0] || 0.21, p.forearmRight[1], p.forearmRight[2]);
+        }
+        if (lUpperLeg) {
+            lUpperLeg.rotation.set(-0.02, 0.0, -0.02);
+        }
+        if (rUpperLeg) {
+            rUpperLeg.rotation.set(-0.02, 0.0, 0.02);
+        }
+        if (lLowerLeg) {
+            lLowerLeg.rotation.set(0.05, 0.0, 0.0);
+        }
+        if (rLowerLeg) {
+            rLowerLeg.rotation.set(0.05, 0.0, 0.0);
         }
 
         const fingerBones = [
@@ -332,9 +348,13 @@ export class DedicatedPMXController {
         fingerBones.forEach((fname) => {
             const b = vrm.humanoid.getNormalizedBoneNode(fname) || vrm.humanoid.getRawBoneNode(fname);
             if (b) {
-                b.rotation.z = b.name.includes('left') ? -0.08 : 0.08;
+                b.rotation.z = fname.includes('left') ? -0.10 : 0.10;
             }
         });
+    }
+
+    applyNaturalBindPoseFix(vrm) {
+        this.applyRestPose(vrm);
     }
 
     optimizeMeshMaterials(mesh) {

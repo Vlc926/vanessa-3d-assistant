@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { getMotionConfig } from './personality_kinematics.js';
+import { NaturalBindPoseFix, VRMARetargeter } from './AvatarAdapter.js';
 
 export class AnimationController {
     constructor(loader) {
         this.loader = loader;
         this.mixer = null;
         this.vrm = null;
+        this.avatarAdapter = null;
         this.bridge = null;
         this.rawVrmaCache = new Map();
         this.retargetedCache = new Map();
@@ -19,8 +21,9 @@ export class AnimationController {
         this.onExpressionRequested = null;
     }
 
-    setVrm(vrm) {
+    setVrm(vrm, avatarAdapter = null) {
         this.vrm = vrm;
+        this.avatarAdapter = avatarAdapter;
         this.retargetedCache.clear();
         this.currentAction = null;
         this.currentMotionName = 'idle';
@@ -50,22 +53,7 @@ export class AnimationController {
 
     applyNaturalRestPose(vrm) {
         if (!vrm || !vrm.humanoid) return;
-        const lArm = vrm.humanoid.getNormalizedBoneNode('leftUpperArm') || vrm.humanoid.getRawBoneNode('leftUpperArm');
-        const rArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm') || vrm.humanoid.getRawBoneNode('rightUpperArm');
-        const lForearm = vrm.humanoid.getNormalizedBoneNode('leftLowerArm') || vrm.humanoid.getRawBoneNode('leftLowerArm');
-        const rForearm = vrm.humanoid.getNormalizedBoneNode('rightLowerArm') || vrm.humanoid.getRawBoneNode('rightLowerArm');
-        if (lArm) {
-            lArm.rotation.set(0.1, 0.05, -1.25);
-        }
-        if (rArm) {
-            rArm.rotation.set(0.1, -0.05, 1.25);
-        }
-        if (lForearm) {
-            lForearm.rotation.set(0.2, 0.0, 0.15);
-        }
-        if (rForearm) {
-            rForearm.rotation.set(0.2, 0.0, -0.15);
-        }
+        NaturalBindPoseFix(vrm);
     }
 
     createProceduralIdleClip() {
@@ -146,7 +134,10 @@ export class AnimationController {
                 if (!this.vrm.meta) {
                     this.vrm.meta = { metaVersion: '0' };
                 }
-                const clip = createVRMAnimationClip(vrmAnimation, this.vrm);
+                let clip = createVRMAnimationClip(vrmAnimation, this.vrm);
+                if (this.avatarAdapter) {
+                    clip = VRMARetargeter.retargetClipToAvatar(clip, this.avatarAdapter);
+                }
                 if (clip && clip.tracks) {
                     clip.tracks = clip.tracks.filter(track => {
                         const lower = track.name.toLowerCase();
