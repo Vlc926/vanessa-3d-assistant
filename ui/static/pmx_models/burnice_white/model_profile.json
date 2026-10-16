@@ -1,0 +1,39 @@
+{
+  "model_id": "burnice_white",
+  "display_name": "Burnice White",
+  "faction": "Sons of Calydon",
+  "role": "Fire / Anomaly Specialist",
+  "primary_file": "burnice_white.pmx",
+  "scale": 0.09,
+  "camera_distance": 2.75,
+  "hips_y": 1.04,
+  "arm_rest": {
+    "left": [
+      0.12,
+      0.04,
+      -1.22
+    ],
+    "right": [
+      0.12,
+      -0.04,
+      1.22
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.2,
+      0.0,
+      0.15
+    ],
+    "right": [
+      0.2,
+      0.0,
+      -0.15
+    ]
+  },
+  "description": "Oficial Zenless Zone Zero - Burnice White con shaders anime de alta fidelidad.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/models/pmx_models/burnice_white/burnice_white.pmx",
+  "pmx_relative_path": "/models/pmx_models/burnice_white/burnice_white.pmx",
+  "file_hash": "196782f74ba613fa9fbc3cc57fb4dc8c6b49136db057a7012a8af29617c0e92c",
+  "file_size": 4271770
+}

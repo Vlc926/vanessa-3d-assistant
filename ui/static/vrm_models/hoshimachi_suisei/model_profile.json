@@ -1,0 +1,40 @@
+{
+  "model_id": "hoshimachi_suisei",
+  "display_name": "Hoshimachi Suisei (Maid)",
+  "faction": "Hololive 0th Gen / Maid Special",
+  "role": "Stellar Vocalist & Flagship Maid",
+  "primary_file": "hoshimachi_suisei.pmx",
+  "folder_alias": "É»èXé╖éóé╣éóâüâCâhê▀æòMMD",
+  "scale": 0.086,
+  "camera_distance": 2.75,
+  "hips_y": 1.05,
+  "arm_rest": {
+    "left": [
+      0.12,
+      0.04,
+      -1.22
+    ],
+    "right": [
+      0.12,
+      -0.04,
+      1.22
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.2,
+      0.0,
+      0.15
+    ],
+    "right": [
+      0.2,
+      0.0,
+      -0.15
+    ]
+  },
+  "description": "Hoshimachi Suisei con atuendo maid de gala, boina y lazo estelar.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/hoshimachi_suisei/hoshimachi_suisei.pmx",
+  "pmx_relative_path": "/models/pmx_models/hoshimachi_suisei/hoshimachi_suisei.pmx",
+  "file_hash": "7bda2d449ee63649fd752daa48fd8f8c7a8691c6414644d829fc8fc354aa02c9",
+  "file_size": 10947549
+}

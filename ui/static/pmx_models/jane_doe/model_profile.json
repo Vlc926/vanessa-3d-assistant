@@ -1,0 +1,39 @@
+{
+  "model_id": "jane_doe",
+  "display_name": "Jane Doe",
+  "faction": "Criminal Investigation Special Response Team",
+  "role": "Physical / Anomaly Thiren",
+  "primary_file": "jane_doe.pmx",
+  "scale": 0.087,
+  "camera_distance": 2.7,
+  "hips_y": 1.02,
+  "arm_rest": {
+    "left": [
+      0.11,
+      0.04,
+      -1.2
+    ],
+    "right": [
+      0.11,
+      -0.04,
+      1.2
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.22,
+      0.0,
+      0.14
+    ],
+    "right": [
+      0.22,
+      0.0,
+      -0.14
+    ]
+  },
+  "description": "Oficial Zenless Zone Zero - Jane Doe con cinemática thiren y articulación suave.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/models/pmx_models/jane_doe/jane_doe.pmx",
+  "pmx_relative_path": "/models/pmx_models/jane_doe/jane_doe.pmx",
+  "file_hash": "61e69a84d95f3cbd79fe454af90c3a62122b14a0bb61053a6187c42411cd00bf",
+  "file_size": 2850969
+}

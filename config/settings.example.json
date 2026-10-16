@@ -1,0 +1,56 @@
+{
+  "wake_word": {
+    "enabled": true,
+    "keyword": "vanessa",
+    "fallback_model": "hey_jarvis",
+    "sensitivity": 0.45
+  },
+  "toggles": {
+    "microphone": true,
+    "camera": true,
+    "continuous_observation": true,
+    "screen_analysis": true,
+    "voice_output": true,
+    "auto_sleep_ui": true,
+    "sleep_delay_seconds": 25
+  },
+  "vision": {
+    "camera_index": 0,
+    "sample_interval_seconds": 3.5,
+    "face_detection": true,
+    "face_recognition": true,
+    "object_detection": true,
+    "width": 640,
+    "height": 480
+  },
+  "speech_to_text": {
+    "model_size": "base",
+    "language": "es",
+    "device": "cpu",
+    "compute_type": "int8"
+  },
+  "ai_backend": {
+    "mode": "cloud_only",
+    "model": "gemini-3.5-flash",
+    "gemini_api_key": "YOUR_GEMINI_API_KEY",
+    "ollama_url": "http://127.0.0.1:11434",
+    "ollama_model": "llama3.2:3b"
+  },
+  "hardware": {
+    "keyboard_backlight_device": "asus::kbd_backlight",
+    "screen_backlight_device": "amdgpu_bl1"
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8765
+  },
+  "voice_settings": {
+    "voice": "gaby_elevenlabs",
+    "elevenlabs_voice_id": "n4GNpJP6Y2Nd09pDtetA",
+    "elevenlabs_api_key": "",
+    "elevenlabs_refresh_token": "",
+    "mode": "cloud",
+    "volume": 80,
+    "elevenlabs_firebase_key": ""
+  }
+}

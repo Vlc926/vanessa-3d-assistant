@@ -1,0 +1,39 @@
+{
+  "model_id": "hoshimi_miyabi",
+  "display_name": "Hoshimi Miyabi",
+  "faction": "Section 6 (Hollow Special Operations)",
+  "role": "Ice / Anomaly Section Leader",
+  "primary_file": "hoshimi_miyabi.pmx",
+  "scale": 0.088,
+  "camera_distance": 2.75,
+  "hips_y": 1.03,
+  "arm_rest": {
+    "left": [
+      0.1,
+      0.05,
+      -1.23
+    ],
+    "right": [
+      0.1,
+      -0.05,
+      1.23
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.18,
+      0.0,
+      0.13
+    ],
+    "right": [
+      0.18,
+      0.0,
+      -0.13
+    ]
+  },
+  "description": "Oficial Zenless Zone Zero - Hoshimi Miyabi con cabello largo y orejas de zorro animadas.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/models/pmx_models/hoshimi_miyabi/hoshimi_miyabi.pmx",
+  "pmx_relative_path": "/models/pmx_models/hoshimi_miyabi/hoshimi_miyabi.pmx",
+  "file_hash": "67bfd1c19836d173b3b4453282c7b22f7a539142d70357f2131c6956d6d684bc",
+  "file_size": 2817368
+}

@@ -1,0 +1,39 @@
+{
+  "model_id": "ellen_joe",
+  "display_name": "Ellen Joe",
+  "faction": "Victoria Housekeeping Co.",
+  "role": "Ice / Attack Specialist Maid",
+  "primary_file": "ellen_joe.pmx",
+  "scale": 0.088,
+  "camera_distance": 2.85,
+  "hips_y": 1.08,
+  "arm_rest": {
+    "left": [
+      0.1,
+      0.05,
+      -1.25
+    ],
+    "right": [
+      0.1,
+      -0.05,
+      1.25
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.18,
+      0.0,
+      0.12
+    ],
+    "right": [
+      0.18,
+      0.0,
+      -0.12
+    ]
+  },
+  "description": "Oficial Zenless Zone Zero - Ellen Joe con atuendo maid y cola estabilizada.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/models/pmx_models/ellen_joe/ellen_joe.pmx",
+  "pmx_relative_path": "/models/pmx_models/ellen_joe/ellen_joe.pmx",
+  "file_hash": "1282bae519f0961bd822bb996e1d77e566a63a727fae4f34e9c5426df3749be4",
+  "file_size": 3677010
+}

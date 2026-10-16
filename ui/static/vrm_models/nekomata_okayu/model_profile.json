@@ -1,0 +1,40 @@
+{
+  "model_id": "nekomata_okayu",
+  "display_name": "Nekomata Okayu",
+  "faction": "Hololive GAMERS",
+  "role": "Chill Cat Onigiri Lover",
+  "primary_file": "nekomata_okayu.pmx",
+  "folder_alias": "öLûöé¿é⌐éΣî÷Ä«mmd_ver1.0",
+  "scale": 0.088,
+  "camera_distance": 2.75,
+  "hips_y": 1.03,
+  "arm_rest": {
+    "left": [
+      0.1,
+      0.04,
+      -1.22
+    ],
+    "right": [
+      0.1,
+      -0.04,
+      1.22
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.19,
+      0.0,
+      0.13
+    ],
+    "right": [
+      0.19,
+      0.0,
+      -0.13
+    ]
+  },
+  "description": "Nekomata Okayu con orejas de gato, sudadera holgada y expresión relajada.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/nekomata_okayu/nekomata_okayu.pmx",
+  "pmx_relative_path": "/models/pmx_models/nekomata_okayu/nekomata_okayu.pmx",
+  "file_hash": "4824c33b23301a6e8181441827dd440c8ad662e8dba3c1ecd2561ba543669d14",
+  "file_size": 7071075
+}

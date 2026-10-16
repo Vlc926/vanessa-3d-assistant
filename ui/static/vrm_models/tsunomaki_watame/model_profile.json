@@ -1,0 +1,40 @@
+{
+  "model_id": "tsunomaki_watame",
+  "display_name": "Tsunomaki Watame",
+  "faction": "Hololive 4th Gen",
+  "role": "Fluffy Bard & Harping Sheep",
+  "primary_file": "tsunomaki_watame.pmx",
+  "folder_alias": "èpè¬éφé╜é▀î÷Ä«mmd_ver1.0",
+  "scale": 0.089,
+  "camera_distance": 2.7,
+  "hips_y": 1.0,
+  "arm_rest": {
+    "left": [
+      0.12,
+      0.04,
+      -1.22
+    ],
+    "right": [
+      0.12,
+      -0.04,
+      1.22
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.18,
+      0.0,
+      0.12
+    ],
+    "right": [
+      0.18,
+      0.0,
+      -0.12
+    ]
+  },
+  "description": "Tsunomaki Watame con cuernos espirales, capa afelpada y cascabel.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/tsunomaki_watame/tsunomaki_watame.pmx",
+  "pmx_relative_path": "/models/pmx_models/tsunomaki_watame/tsunomaki_watame.pmx",
+  "file_hash": "a77ae7157ef7f1d570d112cc9aca179552b2d0dbf22e6aa281cedea9b10735f0",
+  "file_size": 16411668
+}

@@ -1,0 +1,26 @@
+services:
+  vanessa-graphics-engine:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.engine
+    container_name: vanessa_graphics_engine
+    restart: unless-stopped
+    ports:
+      - "8899:8899"
+    volumes:
+      - ../../models/pmx_models:/app/models/pmx_models:ro
+      - ../../ui:/app/ui:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8899/ui/vrm/index.html')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

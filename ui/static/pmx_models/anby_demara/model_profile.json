@@ -1,0 +1,39 @@
+{
+  "model_id": "anby_demara",
+  "display_name": "Anby Demara",
+  "faction": "Cunning Hares",
+  "role": "Electric / Stun Specialist",
+  "primary_file": "anby_demara.pmx",
+  "scale": 0.086,
+  "camera_distance": 2.65,
+  "hips_y": 0.98,
+  "arm_rest": {
+    "left": [
+      0.1,
+      0.05,
+      -1.22
+    ],
+    "right": [
+      0.1,
+      -0.05,
+      1.22
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.19,
+      0.0,
+      0.12
+    ],
+    "right": [
+      0.19,
+      0.0,
+      -0.12
+    ]
+  },
+  "description": "Oficial Zenless Zone Zero - Anby Demara con audífonos y accesorios dinámicos.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/models/pmx_models/anby_demara/anby_demara.pmx",
+  "pmx_relative_path": "/models/pmx_models/anby_demara/anby_demara.pmx",
+  "file_hash": "6de2edb52e2e17669c7cc23b3bb41f5ac3935ef4c894b55ae0c69ba01d0300d5",
+  "file_size": 2464809
+}

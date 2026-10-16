@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  vanessa-core:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: vanessa_cloud_backend
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ../config:/app/config
+      - ../data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/api/v1/omni/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Reverse Proxy with Automatic SSL (Let's Encrypt) and WebSocket Support
+  caddy:
+    image: caddy:2-alpine
+    container_name: vanessa_ssl_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - vanessa-core
+
+volumes:
+  caddy_data:
+  caddy_config:

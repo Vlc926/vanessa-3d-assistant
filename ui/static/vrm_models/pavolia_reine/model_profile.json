@@ -1,0 +1,40 @@
+{
+  "model_id": "pavolia_reine",
+  "display_name": "Pavolia Reine",
+  "faction": "Hololive Indonesia 2nd Gen (holoro)",
+  "role": "Peafowl Princess",
+  "primary_file": "pavolia_reine.pmx",
+  "folder_alias": "PavoliaReine",
+  "scale": 0.084,
+  "camera_distance": 2.8,
+  "hips_y": 1.06,
+  "arm_rest": {
+    "left": [
+      0.1,
+      0.05,
+      -1.24
+    ],
+    "right": [
+      0.1,
+      -0.05,
+      1.24
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.18,
+      0.0,
+      0.12
+    ],
+    "right": [
+      0.18,
+      0.0,
+      -0.12
+    ]
+  },
+  "description": "Pavolia Reine con plumaje real de pavo real, vestido de alta costura y peinado lateral.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/pavolia_reine/pavolia_reine.pmx",
+  "pmx_relative_path": "/models/pmx_models/pavolia_reine/pavolia_reine.pmx",
+  "file_hash": "06ffd3a9c93f311b8fefbda1e25c33541c7c8bfd819cdcfb50a493a14310bd01",
+  "file_size": 4649764
+}

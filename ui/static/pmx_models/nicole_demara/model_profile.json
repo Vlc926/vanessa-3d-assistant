@@ -1,0 +1,39 @@
+{
+  "model_id": "nicole_demara",
+  "display_name": "Nicole Demara",
+  "faction": "Cunning Hares",
+  "role": "Ether / Support Leader",
+  "primary_file": "nicole_demara.pmx",
+  "scale": 0.089,
+  "camera_distance": 2.8,
+  "hips_y": 1.06,
+  "arm_rest": {
+    "left": [
+      0.13,
+      0.04,
+      -1.24
+    ],
+    "right": [
+      0.13,
+      -0.04,
+      1.24
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.21,
+      0.0,
+      0.16
+    ],
+    "right": [
+      0.21,
+      0.0,
+      -0.16
+    ]
+  },
+  "description": "Oficial Zenless Zone Zero - Nicole Demara con coleta y abrigo con físicas estables.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/models/pmx_models/nicole_demara/nicole_demara.pmx",
+  "pmx_relative_path": "/models/pmx_models/nicole_demara/nicole_demara.pmx",
+  "file_hash": "ed8be2038d897a85e42cd1639476c1e889617af79d2d9ec0698a24c363003248",
+  "file_size": 2976611
+}

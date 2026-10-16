@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3 uid="uid://vanessamain001"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/avatar_rig.gd" id="2_rig"]
+[ext_resource type="Script" path="res://scripts/ipc_server.gd" id="3_ipc"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 2.25)
+fov = 38.0
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 1, 2.5, 2)
+light_energy = 1.35
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433013, 0.75, -1.5, 2, -1.5)
+light_color = Color(1, 0.85, 0.92, 1)
+light_energy = 0.75
+
+[node name="AvatarHolder" type="Node3D" parent="."]
+script = ExtResource("2_rig")
+
+[node name="IPCServer" type="Node" parent="."]
+script = ExtResource("3_ipc")

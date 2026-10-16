@@ -1,0 +1,60 @@
+{
+    "server": {
+        "host": "0.0.0.0",
+        "port": 8765,
+        "auth_token": "vanessa_super_secret_token_12345",
+        "use_ssl": false,
+        "public_url": "https://tu-dominio-o-ip-vps.com"
+    },
+    "whatsapp": {
+        "enabled": false,
+        "phone_number_id": "TU_PHONE_NUMBER_ID_META",
+        "access_token": "TU_META_PERMANENT_ACCESS_TOKEN",
+        "verify_token": "vanessa_meta_webhook_verify_token_999",
+        "business_account_id": "TU_WABA_ID"
+    },
+    "discord": {
+        "enabled": false,
+        "bot_token": "TU_DISCORD_BOT_TOKEN",
+        "client_id": "TU_DISCORD_APPLICATION_CLIENT_ID",
+        "monitored_guilds": [],
+        "monitored_channels": []
+    },
+    "telegram": {
+        "enabled": false,
+        "bot_token": "TU_TELEGRAM_BOT_TOKEN",
+        "chat_id": "TU_CHAT_ID_PERSONAL",
+        "webhook_url": "https://tu-dominio-o-ip-vps.com/api/v1/omni/telegram"
+    },
+    "meta": {
+        "enabled": false,
+        "access_token": "TU_PAGE_ACCESS_TOKEN",
+        "verify_token": "vanessa_meta_webhook_verify_token_999",
+        "page_id": "TU_FACEBOOK_PAGE_ID",
+        "instagram_business_id": "TU_INSTAGRAM_BUSINESS_ID"
+    },
+    "steam": {
+        "enabled": false,
+        "api_key": "TU_STEAM_WEB_API_KEY",
+        "steam_id": "TU_STEAM_ID_64_NUMERICO"
+    },
+    "spotify": {
+        "enabled": false,
+        "client_id": "TU_SPOTIFY_CLIENT_ID",
+        "client_secret": "TU_SPOTIFY_CLIENT_SECRET",
+        "redirect_uri": "http://localhost:8888/callback",
+        "refresh_token": "TU_SPOTIFY_REFRESH_TOKEN"
+    },
+    "google": {
+        "enabled": false,
+        "calendar_id": "primary",
+        "credentials_json_path": "config/google_credentials.json",
+        "token_json_path": "config/google_token.json"
+    },
+    "ai_engine": {
+        "primary_model": "gemini-2.5-flash",
+        "thinking_model": "gemini-2.5-pro",
+        "use_cloud_gpu": true,
+        "tts_engine": "kokoro_server"
+    }
+}

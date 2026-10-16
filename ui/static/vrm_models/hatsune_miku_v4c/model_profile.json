@@ -1,0 +1,40 @@
+{
+  "model_id": "hatsune_miku_v4c",
+  "display_name": "Hatsune Miku V4C (野餐式)",
+  "faction": "Vocaloid / Crypton Future Media",
+  "role": "Virtual Diva & Global Idol",
+  "primary_file": "v4c7.3.pmx",
+  "folder_alias": "野餐式v4c",
+  "scale": 0.088,
+  "camera_distance": 2.75,
+  "hips_y": 1.02,
+  "arm_rest": {
+    "left": [
+      0.1,
+      0.05,
+      -1.24
+    ],
+    "right": [
+      0.1,
+      -0.05,
+      1.24
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.18,
+      0.0,
+      0.12
+    ],
+    "right": [
+      0.18,
+      0.0,
+      -0.12
+    ]
+  },
+  "description": "Hatsune Miku V4C por Picnic con coletas dobles icónicas, atuendo cibernético y corbata cian.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/hatsune_miku_v4c/v4c7.3.pmx",
+  "pmx_relative_path": "/models/pmx_models/hatsune_miku_v4c/v4c7.3.pmx",
+  "file_hash": "ca7c4a0b58bc169bcea49b84dc888a5371cef8850273bb2522e70ff4eeeab65b",
+  "file_size": 8844169
+}

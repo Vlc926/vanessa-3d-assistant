@@ -1,0 +1,6 @@
+# Caddy configuration for Vanessa Cloud Server
+# Reemplaza 'tu-dominio.com' por tu dominio real o usa ':80' si solo pruebas con IP pública
+
+tu-dominio.com {
+    reverse_proxy vanessa-core:8765
+}

@@ -1,0 +1,40 @@
+{
+  "model_id": "inugami_korone",
+  "display_name": "Inugami Korone",
+  "faction": "Hololive GAMERS",
+  "role": "Doog Baker & Energetic Gamer",
+  "primary_file": "inugami_korone.pmx",
+  "folder_alias": "InugamiKorone",
+  "scale": 0.09,
+  "camera_distance": 2.7,
+  "hips_y": 0.98,
+  "arm_rest": {
+    "left": [
+      0.11,
+      0.04,
+      -1.2
+    ],
+    "right": [
+      0.11,
+      -0.04,
+      1.2
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.2,
+      0.0,
+      0.14
+    ],
+    "right": [
+      0.2,
+      0.0,
+      -0.14
+    ]
+  },
+  "description": "Inugami Korone con orejas caninas, cola animada y pasador de hueso.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/inugami_korone/inugami_korone.pmx",
+  "pmx_relative_path": "/models/pmx_models/inugami_korone/inugami_korone.pmx",
+  "file_hash": "3b4882df059eb6f15b699471e6b0917beba6b53f0bc2e4b7ca72f7ed0569a60f",
+  "file_size": 3828779
+}

@@ -1,0 +1,40 @@
+{
+  "model_id": "houshou_marine",
+  "display_name": "Houshou Marine (V2)",
+  "faction": "Hololive Fantasy (3rd Gen)",
+  "role": "Ahoy! Pirate Captain",
+  "primary_file": "houshou_marine.pmx",
+  "folder_alias": "HoushouMarine",
+  "scale": 0.088,
+  "camera_distance": 2.75,
+  "hips_y": 1.02,
+  "arm_rest": {
+    "left": [
+      0.1,
+      0.05,
+      -1.24
+    ],
+    "right": [
+      0.1,
+      -0.05,
+      1.24
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.18,
+      0.0,
+      0.12
+    ],
+    "right": [
+      0.18,
+      0.0,
+      -0.12
+    ]
+  },
+  "description": "Houshou Marine V2 con sombrero pirata, capa dorada y shaders 4K.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/houshou_marine/houshou_marine.pmx",
+  "pmx_relative_path": "/models/pmx_models/houshou_marine/houshou_marine.pmx",
+  "file_hash": "3eed722dbd1dec33105545c4c195d7f4ca7498a73fce80155de6c932571406ae",
+  "file_size": 6582067
+}

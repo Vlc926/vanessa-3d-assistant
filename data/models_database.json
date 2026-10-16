@@ -1,0 +1,315 @@
+{
+  "table_name": "models",
+  "total_records": 8,
+  "primary_key": "model_id",
+  "unique_indices": [
+    "model_id",
+    "file_hash"
+  ],
+  "records": {
+    "hoshimachi_suisei": {
+      "model_id": "hoshimachi_suisei",
+      "display_name": "Hoshimachi Suisei (Maid)",
+      "character_name": "Hoshimachi Suisei",
+      "franchise": "Hololive 0th Gen / Maid Special",
+      "folder_alias": "É»èXé╖éóé╣éóâüâCâhê▀æòMMD",
+      "primary_file": "hoshimachi_suisei.pmx",
+      "scale": 0.086,
+      "camera_distance": 2.75,
+      "hips_y": 1.05,
+      "arm_left": [
+        0.12,
+        0.04,
+        -1.22
+      ],
+      "arm_right": [
+        0.12,
+        -0.04,
+        1.22
+      ],
+      "forearm_left": [
+        0.2,
+        0.0,
+        0.15
+      ],
+      "forearm_right": [
+        0.2,
+        0.0,
+        -0.15
+      ],
+      "is_flagship": true,
+      "pmx_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/hoshimachi_suisei/hoshimachi_suisei.pmx",
+      "web_path": "/ui/static/vrm_models/hoshimachi_suisei/hoshimachi_suisei.pmx",
+      "file_hash": "9715d61f47315dd0dfc14b5a8da3f00dbb07f121f39d5cd95d549a8996d0a5a4",
+      "file_size": 10947549,
+      "missing_textures": 0,
+      "status": "verified_active"
+    },
+    "hatsune_miku_v4c": {
+      "model_id": "hatsune_miku_v4c",
+      "display_name": "Hatsune Miku V4C (野餐式)",
+      "character_name": "Hatsune Miku",
+      "franchise": "Vocaloid / Crypton Future Media",
+      "folder_alias": "野餐式v4c",
+      "primary_file": "v4c7.3.pmx",
+      "scale": 0.088,
+      "camera_distance": 2.75,
+      "hips_y": 1.02,
+      "arm_left": [
+        0.1,
+        0.05,
+        -1.24
+      ],
+      "arm_right": [
+        0.1,
+        -0.05,
+        1.24
+      ],
+      "forearm_left": [
+        0.18,
+        0.0,
+        0.12
+      ],
+      "forearm_right": [
+        0.18,
+        0.0,
+        -0.12
+      ],
+      "is_flagship": false,
+      "pmx_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/hatsune_miku_v4c/v4c7.3.pmx",
+      "web_path": "/ui/static/vrm_models/hatsune_miku_v4c/v4c7.3.pmx",
+      "file_hash": "2289ab1c9f4089e6aca069d88586b22eafbfc6f7ffc4d0b74607864eef765b80",
+      "file_size": 8844169,
+      "missing_textures": 0,
+      "status": "verified_active"
+    },
+    "houshou_marine": {
+      "model_id": "houshou_marine",
+      "display_name": "Houshou Marine (V2)",
+      "character_name": "Houshou Marine",
+      "franchise": "Hololive Fantasy (3rd Gen)",
+      "folder_alias": "HoushouMarine",
+      "primary_file": "houshou_marine.pmx",
+      "scale": 0.088,
+      "camera_distance": 2.75,
+      "hips_y": 1.02,
+      "arm_left": [
+        0.1,
+        0.05,
+        -1.24
+      ],
+      "arm_right": [
+        0.1,
+        -0.05,
+        1.24
+      ],
+      "forearm_left": [
+        0.18,
+        0.0,
+        0.12
+      ],
+      "forearm_right": [
+        0.18,
+        0.0,
+        -0.12
+      ],
+      "is_flagship": false,
+      "pmx_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/houshou_marine/houshou_marine.pmx",
+      "web_path": "/ui/static/vrm_models/houshou_marine/houshou_marine.pmx",
+      "file_hash": "25fdbc469ffc375de19d828127a7359c680793c3faae0953d03eab8538c96e94",
+      "file_size": 6582067,
+      "missing_textures": 0,
+      "status": "verified_active"
+    },
+    "inugami_korone": {
+      "model_id": "inugami_korone",
+      "display_name": "Inugami Korone",
+      "character_name": "Inugami Korone",
+      "franchise": "Hololive GAMERS",
+      "folder_alias": "InugamiKorone",
+      "primary_file": "inugami_korone.pmx",
+      "scale": 0.09,
+      "camera_distance": 2.7,
+      "hips_y": 0.98,
+      "arm_left": [
+        0.11,
+        0.04,
+        -1.2
+      ],
+      "arm_right": [
+        0.11,
+        -0.04,
+        1.2
+      ],
+      "forearm_left": [
+        0.2,
+        0.0,
+        0.14
+      ],
+      "forearm_right": [
+        0.2,
+        0.0,
+        -0.14
+      ],
+      "is_flagship": false,
+      "pmx_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/inugami_korone/inugami_korone.pmx",
+      "web_path": "/ui/static/vrm_models/inugami_korone/inugami_korone.pmx",
+      "file_hash": "73f4e7e965e035e813463c98b607d52618c3e3d4ed4236050d1e6b44f3630aa3",
+      "file_size": 3828779,
+      "missing_textures": 0,
+      "status": "verified_active"
+    },
+    "nekomata_okayu": {
+      "model_id": "nekomata_okayu",
+      "display_name": "Nekomata Okayu",
+      "character_name": "Nekomata Okayu",
+      "franchise": "Hololive GAMERS",
+      "folder_alias": "öLûöé¿é⌐éΣî÷Ä«mmd_ver1.0",
+      "primary_file": "nekomata_okayu.pmx",
+      "scale": 0.088,
+      "camera_distance": 2.75,
+      "hips_y": 1.03,
+      "arm_left": [
+        0.1,
+        0.04,
+        -1.22
+      ],
+      "arm_right": [
+        0.1,
+        -0.04,
+        1.22
+      ],
+      "forearm_left": [
+        0.19,
+        0.0,
+        0.13
+      ],
+      "forearm_right": [
+        0.19,
+        0.0,
+        -0.13
+      ],
+      "is_flagship": false,
+      "pmx_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/nekomata_okayu/nekomata_okayu.pmx",
+      "web_path": "/ui/static/vrm_models/nekomata_okayu/nekomata_okayu.pmx",
+      "file_hash": "e78de8b6ccb76ac26ebcdf1255999d8766964ea2632e781ac7b267bca9363f9e",
+      "file_size": 7071075,
+      "missing_textures": 0,
+      "status": "verified_active"
+    },
+    "tsunomaki_watame": {
+      "model_id": "tsunomaki_watame",
+      "display_name": "Tsunomaki Watame",
+      "character_name": "Tsunomaki Watame",
+      "franchise": "Hololive 4th Gen",
+      "folder_alias": "èpè¬éφé╜é▀î÷Ä«mmd_ver1.0",
+      "primary_file": "tsunomaki_watame.pmx",
+      "scale": 0.089,
+      "camera_distance": 2.7,
+      "hips_y": 1.0,
+      "arm_left": [
+        0.12,
+        0.04,
+        -1.22
+      ],
+      "arm_right": [
+        0.12,
+        -0.04,
+        1.22
+      ],
+      "forearm_left": [
+        0.18,
+        0.0,
+        0.12
+      ],
+      "forearm_right": [
+        0.18,
+        0.0,
+        -0.12
+      ],
+      "is_flagship": false,
+      "pmx_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/tsunomaki_watame/tsunomaki_watame.pmx",
+      "web_path": "/ui/static/vrm_models/tsunomaki_watame/tsunomaki_watame.pmx",
+      "file_hash": "c1c9b4d50c41f102cc9c162b4e2c4e10ffe2ecf25963ce4e3258c857222f55d8",
+      "file_size": 16411668,
+      "missing_textures": 0,
+      "status": "verified_active"
+    },
+    "ouro_kronii": {
+      "model_id": "ouro_kronii",
+      "display_name": "Ouro Kronii",
+      "character_name": "Ouro Kronii",
+      "franchise": "Hololive English -Council- / Promise",
+      "folder_alias": "OuroKronii",
+      "primary_file": "ouro_kronii.pmx",
+      "scale": 0.075,
+      "camera_distance": 2.95,
+      "hips_y": 1.15,
+      "arm_left": [
+        0.08,
+        0.05,
+        -1.26
+      ],
+      "arm_right": [
+        0.08,
+        -0.05,
+        1.26
+      ],
+      "forearm_left": [
+        0.16,
+        0.0,
+        0.1
+      ],
+      "forearm_right": [
+        0.16,
+        0.0,
+        -0.1
+      ],
+      "is_flagship": false,
+      "pmx_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/ouro_kronii/ouro_kronii.pmx",
+      "web_path": "/ui/static/vrm_models/ouro_kronii/ouro_kronii.pmx",
+      "file_hash": "4d612af4c04e6991dae0fce23cc4e4149e0bb6e2a95d660141720255cdddacef",
+      "file_size": 4958920,
+      "missing_textures": 0,
+      "status": "verified_active"
+    },
+    "pavolia_reine": {
+      "model_id": "pavolia_reine",
+      "display_name": "Pavolia Reine",
+      "character_name": "Pavolia Reine",
+      "franchise": "Hololive Indonesia 2nd Gen (holoro)",
+      "folder_alias": "PavoliaReine",
+      "primary_file": "pavolia_reine.pmx",
+      "scale": 0.084,
+      "camera_distance": 2.8,
+      "hips_y": 1.06,
+      "arm_left": [
+        0.1,
+        0.05,
+        -1.24
+      ],
+      "arm_right": [
+        0.1,
+        -0.05,
+        1.24
+      ],
+      "forearm_left": [
+        0.18,
+        0.0,
+        0.12
+      ],
+      "forearm_right": [
+        0.18,
+        0.0,
+        -0.12
+      ],
+      "is_flagship": false,
+      "pmx_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/pavolia_reine/pavolia_reine.pmx",
+      "web_path": "/ui/static/vrm_models/pavolia_reine/pavolia_reine.pmx",
+      "file_hash": "a861fdfa2ddb75a878d94b94411dbadfb0e2de31450a767b7dc2869b41be27c5",
+      "file_size": 4649764,
+      "missing_textures": 0,
+      "status": "verified_active"
+    }
+  }
+}

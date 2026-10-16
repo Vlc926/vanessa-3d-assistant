@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vanessa - Asistente Maid Personal</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-glow"></div>
+      <div class="app-title">VANESSA // MAID AI CORE</div>
+    </div>
+    <div class="header-status">
+      <div class="status-badge">
+        <div id="server-status-dot" class="status-dot"></div>
+        <span id="server-status-text">Conectando...</span>
+      </div>
+      <div class="status-badge">
+        <span id="user-identity-badge">👤 Amo Víctor</span>
+      </div>
+      <div class="status-badge">
+        <span id="objects-summary-badge">🗄️ Entorno activo</span>
+      </div>
+      <div class="status-badge">
+        <div id="wake-status-dot" class="status-dot active"></div>
+        <span>Wake Word ("Vanessa")</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Three-Column Dashboard -->
+  <div class="dashboard-grid">
+    
+    <!-- Left Column: Interactive Anime Maid -->
+    <div class="panel avatar-container">
+      <div class="section-title">Tu Maid Virtual</div>
+      <div class="avatar-pedestal" id="avatar-pedestal" title="Toca a Vanessa para despertarla o interactuar">
+        <div class="hologram-ring"></div>
+        <!-- SVG Avatar injected via avatar.js -->
+      </div>
+      <div class="character-info">
+        <div class="character-name" id="char-name-display">Vanessa</div>
+        <div class="character-status-text" id="character-status">Atenta a su orden, Amo</div>
+        <div class="wake-word-hint">Di <b>"Vanessa"</b> para llamarme sin tocar el teclado</div>
+        <div class="dormant-indicator">💤 Modo reposo activo (Ahorrando memoria RAM)</div>
+      </div>
+    </div>
+
+    <!-- Center Column: Chat & Activity Feed -->
+    <div class="panel chat-panel">
+      <div class="section-title">Comunicaciones & Órdenes</div>
+      <div class="chat-history" id="chat-history">
+        <div class="chat-bubble assistant">
+          <div class="bubble-author">Vanessa</div>
+          <div class="bubble-content">Bienvenido, Amo Víctor. El té y sus herramientas de desarrollo están listos. Puede pedirme ver su pantalla para opinar sobre su código o videos, generar hojas de cálculo de Excel, bases de datos, encender sus luces de teclado o lo que usted desee.</div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <input type="text" id="user-input" class="chat-input" placeholder="Ordéname algo, Amo... o llámame diciendo 'Vanessa'..." autocomplete="off">
+        <button id="voice-btn" class="btn btn-secondary" title="Hablar con Vanessa">🎤</button>
+        <button id="send-btn" class="btn">Enviar</button>
+      </div>
+    </div>
+
+    <!-- Right Column: Controls, Vision & Hardware -->
+    <div class="panel">
+      <div class="section-title">Herramientas & Privacidad</div>
+      <div class="toggle-group">
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>🎙️</span>
+            <span>Micrófono ("Vanessa")</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="mic-toggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>📷</span>
+            <span>Cámara Frontal & Biometría</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="cam-toggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top: 0.3rem;">Percepción Visual & Entorno</div>
+      <div class="perception-card">
+        <div class="perception-header">
+          <span>Ojo de Vanessa</span>
+          <span>En tiempo real</span>
+        </div>
+        <div id="perception-text" style="color: var(--text-muted); font-size: 0.85rem;">
+          Observando su presencia frente a la pantalla...
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top: 0.3rem;">Acciones Especiales de Maid</div>
+      <div class="actions-grid">
+        <button id="btn-screen-analysis" class="action-btn">
+          <span>🖥️</span>
+          <span>Analizar Pantalla</span>
+        </button>
+        <button id="btn-gen-excel" class="action-btn">
+          <span>📊</span>
+          <span>Generar Excel</span>
+        </button>
+        <button id="btn-detect-objects" class="action-btn">
+          <span>🗄️</span>
+          <span>Objetos en Mesa</span>
+        </button>
+        <button id="btn-enroll-face" class="action-btn">
+          <span>👤</span>
+          <span>Memorizar Rostro</span>
+        </button>
+        <button id="btn-kbd-on" class="action-btn">
+          <span>💡</span>
+          <span>Luces Teclado ON</span>
+        </button>
+        <button id="btn-kbd-off" class="action-btn">
+          <span>🌑</span>
+          <span>Luces Teclado OFF</span>
+        </button>
+        <button id="btn-wifi-toggle" class="action-btn">
+          <span>📶</span>
+          <span>Alternar Wi-Fi</span>
+        </button>
+        <button id="btn-bt-toggle" class="action-btn">
+          <span>🔷</span>
+          <span>Alternar Bluetooth</span>
+        </button>
+        <button id="btn-youtube" class="action-btn">
+          <span>▶️</span>
+          <span>Abrir YouTube</span>
+        </button>
+        <button id="btn-shutdown" class="action-btn" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1);">
+          <span>⚡</span>
+          <span>Apagar PC</span>
+        </button>
+      </div>
+
+      <button id="open-settings-btn" class="btn btn-secondary" style="margin-top: auto;">
+        ⚙️ Personalidad & Parámetros
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Personality Customizer Modal -->
+  <div class="modal-overlay" id="personality-modal">
+    <div class="modal-content">
+      <div class="section-title">Personalidad de Vanessa</div>
+      
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="input-char-name" value="Vanessa">
+      </div>
+
+      <div class="form-group">
+        <label>Estilo de Habla / Tono</label>
+        <input type="text" id="input-speech-style" value="Leal, devota, amable como maid, juguetona y sarcástica en tono casual, seria e impecable cuando el amo habla serio.">
+      </div>
+
+      <div class="form-group">
+        <label>System Prompt (Directrices de Personalidad)</label>
+        <textarea id="input-system-prompt">Eres Vanessa, la asistente virtual y maid personal de Víctor. Tienes acceso completo a su computadora (control de hardware, luces de teclado, wifi, bluetooth, apagar el equipo, generar Excel, Word, bases de datos y código), a su pantalla (para ver código, documentos o videos y darle sugerencias inteligentes), a la cámara frontal (con reconocimiento facial de su rostro y de los objetos en su mesa) y a su voz. Tu personalidad: amable, cálida y leal como una maid devota, juguetona y con un toque de sarcasmo sutil cuando bromean, pero seria, impecable y ejecutiva cuando su voz es seria.</textarea>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+        <button id="close-modal-btn" class="btn btn-secondary">Cancelar</button>
+        <button id="save-personality-btn" class="btn">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/avatar.js"></script>
+</body>
+</html>

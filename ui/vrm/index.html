@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanessa VRM Avatar</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: transparent;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #fortnite-hologram-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.25) 0%, rgba(139, 92, 246, 0.15) 45%, transparent 75%);
+            mix-blend-mode: screen;
+            z-index: 999;
+        }
+        #fortnite-hologram-overlay.active {
+            opacity: 1;
+        }
+        #fortnite-hologram-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(56, 189, 248, 0) 0px,
+                rgba(56, 189, 248, 0) 3px,
+                rgba(56, 189, 248, 0.35) 4px,
+                rgba(56, 189, 248, 0.35) 5px
+            );
+            animation: holo-scan 1.2s linear infinite;
+        }
+        #fortnite-hologram-overlay::after {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: 0;
+            width: 100%;
+            height: 40%;
+            background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.8) 50%, rgba(56, 189, 248, 0.9) 70%, transparent 100%);
+            animation: holo-beam 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes holo-scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(20px); }
+        }
+        @keyframes holo-beam {
+            0% { top: -30%; opacity: 0; }
+            30% { opacity: 1; }
+            100% { top: 120%; opacity: 0; }
+        }
+        #hud-container {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            width: 250px;
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.2);
+            color: #f8fafc;
+            z-index: 1000;
+            font-size: 11px;
+            transition: all 0.25s ease;
+            pointer-events: auto;
+        }
+        #hud-container.collapsed {
+            width: auto;
+            border-radius: 9999px;
+            padding: 2px 6px;
+        }
+        #hud-container.collapsed .hud-header {
+            border-bottom: none;
+            padding: 2px 4px;
+        }
+        #hud-container.collapsed #hud-body {
+            display: none;
+        }
+        .hud-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .hud-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hud-title {
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            color: #38bdf8;
+            text-transform: uppercase;
+        }
+        .state-badge {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        .state-idle {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+        }
+        .state-listening {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.6);
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+            animation: pulse-glow 1.2s infinite alternate;
+        }
+        .state-thinking {
+            background: rgba(234, 179, 8, 0.2);
+            color: #facc15;
+            border: 1px solid rgba(234, 179, 8, 0.6);
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+            animation: pulse-glow 0.8s infinite alternate;
+        }
+        .state-speaking {
+            background: rgba(236, 72, 153, 0.2);
+            color: #f472b6;
+            border: 1px solid rgba(236, 72, 153, 0.6);
+            box-shadow: 0 0 12px rgba(236, 72, 153, 0.5);
+            animation: pulse-glow 0.6s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { opacity: 0.7; transform: scale(0.97); }
+            to { opacity: 1.0; transform: scale(1.03); }
+        }
+        .hud-btn-icon {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+        }
+        .hud-btn-icon:hover {
+            color: #f8fafc;
+        }
+        .hud-content {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .hud-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hud-label {
+            font-weight: 600;
+            color: #94a3b8;
+            font-size: 10px;
+        }
+        .hud-select {
+            background: rgba(30, 41, 59, 0.85);
+            color: #f1f5f9;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            padding: 4px 6px;
+            font-size: 10px;
+            outline: none;
+            cursor: pointer;
+        }
+        .hud-btn {
+            background: rgba(30, 41, 59, 0.75);
+            color: #f8fafc;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            padding: 5px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .hud-btn:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: rgba(56, 189, 248, 0.5);
+            color: #38bdf8;
+        }
+        .hud-btn-mic {
+            width: 100%;
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #34d399;
+            font-weight: 600;
+        }
+        .hud-btn-mic.muted {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #f87171;
+        }
+        .hud-group-label {
+            font-weight: 600;
+            color: #94a3b8;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-top: 2px;
+        }
+        .hud-btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+        .hud-btn-chip {
+            padding: 4px 2px;
+            font-size: 9px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+                "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.0/lib/three-vrm.module.min.js",
+                "@pixiv/three-vrm-animation": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm-animation@3.3.0/lib/three-vrm-animation.module.min.js",
+                "three/addons/loaders/FBXLoader.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/FBXLoader.js",
+                "three/addons/loaders/MMDLoader.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/MMDLoader.js",
+                "three/addons/loaders/TGALoader.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/TGALoader.js"
+            }
+        }
+    </script>
+    <script src="qwebchannel.js"></script>
+</head>
+<body>
+    <div id="fortnite-hologram-overlay"></div>
+    <div id="hud-container" class="collapsed">
+        <div class="hud-header">
+            <div class="hud-title-row">
+                <span class="hud-title">VANESSA</span>
+                <span id="directive-state-badge" class="state-badge state-idle">IDLE</span>
+            </div>
+            <button id="btn-toggle-hud" class="hud-btn-icon" title="Toggle HUD">+</button>
+        </div>
+        <div id="hud-body" class="hud-content">
+            <div class="hud-row">
+                <label class="hud-label">Model</label>
+                <select id="model-selector" class="hud-select">
+                    <option value="/ui/static/vrm_models/Vanessa_Flagship_Anime.vrm">Vanessa Flagship (VRM)</option>
+                    <option value="/ui/static/vrm_models/hoshimachi_suisei/hoshimachi_suisei.pmx">Hoshimachi Suisei (PMX)</option>
+                    <option value="/ui/static/vrm_models/houshou_marine/houshou_marine.pmx">Houshou Marine (PMX)</option>
+                    <option value="/ui/static/vrm_models/nekomata_okayu/nekomata_okayu.pmx">Nekomata Okayu (PMX)</option>
+                    <option value="/ui/static/vrm_models/inugami_korone/inugami_korone.pmx">Inugami Korone (PMX)</option>
+                    <option value="/ui/static/vrm_models/ouro_kronii/ouro_kronii.pmx">Ouro Kronii (PMX)</option>
+                    <option value="/ui/static/vrm_models/pavolia_reine/pavolia_reine.pmx">Pavolia Reine (PMX)</option>
+                    <option value="/ui/static/vrm_models/tsunomaki_watame/tsunomaki_watame.pmx">Tsunomaki Watame (PMX)</option>
+                    <option value="/ui/static/pmx_models/ellen_joe/艾莲.pmx">Ellen Joe ZZZ (PMX)</option>
+                    <option value="/ui/static/pmx_models/anby_demara/安比.pmx">Anby Demara ZZZ (PMX)</option>
+                    <option value="/ui/static/pmx_models/nicole_demara/nicole_demara.pmx">Nicole Demara ZZZ (PMX)</option>
+                    <option value="/ui/static/pmx_models/hoshimi_miyabi/星见雅.pmx">Hoshimi Miyabi ZZZ (PMX)</option>
+                    <option value="/ui/static/pmx_models/jane_doe/简.pmx">Jane Doe ZZZ (PMX)</option>
+                    <option value="/ui/static/pmx_models/burnice_white/柏妮思.pmx">Burnice White ZZZ (PMX)</option>
+                </select>
+            </div>
+            <div class="hud-row">
+                <button id="btn-mic-toggle" class="hud-btn hud-btn-mic">🎙️ Mic: ON</button>
+            </div>
+            <div class="hud-group-label">Emotions</div>
+            <div class="hud-btn-grid">
+                <button class="hud-btn hud-btn-chip" data-emotion="joy">😊 Joy</button>
+                <button class="hud-btn hud-btn-chip" data-emotion="curiosity">🧐 Curious</button>
+                <button class="hud-btn hud-btn-chip" data-emotion="surprise">😲 Surprise</button>
+                <button class="hud-btn hud-btn-chip" data-emotion="shyness">😳 Shy</button>
+                <button class="hud-btn hud-btn-chip" data-emotion="tension">😠 Tension</button>
+                <button class="hud-btn hud-btn-chip" data-emotion="reset">😐 Neutral</button>
+            </div>
+            <div class="hud-group-label">Gestures</div>
+            <div class="hud-btn-grid">
+                <button class="hud-btn hud-btn-chip" data-gesture="wave">👋 Wave</button>
+                <button class="hud-btn hud-btn-chip" data-gesture="point">👉 Point</button>
+                <button class="hud-btn hud-btn-chip" data-gesture="question">❓ Question</button>
+                <button class="hud-btn hud-btn-chip" data-gesture="cheer">🎉 Cheer</button>
+                <button class="hud-btn hud-btn-chip" data-gesture="dance_pop">💃 Dance</button>
+                <button class="hud-btn hud-btn-chip" data-gesture="idle">🧍 Idle</button>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="app.js?v=20261014_hybrid_v1"></script>
+</body>
+</html>

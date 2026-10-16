@@ -1,0 +1,40 @@
+{
+  "model_id": "ouro_kronii",
+  "display_name": "Ouro Kronii",
+  "faction": "Hololive English -Council- / Promise",
+  "role": "Warden of Time",
+  "primary_file": "ouro_kronii.pmx",
+  "folder_alias": "OuroKronii",
+  "scale": 0.075,
+  "camera_distance": 2.95,
+  "hips_y": 1.15,
+  "arm_rest": {
+    "left": [
+      0.08,
+      0.05,
+      -1.26
+    ],
+    "right": [
+      0.08,
+      -0.05,
+      1.26
+    ]
+  },
+  "forearm_rest": {
+    "left": [
+      0.16,
+      0.0,
+      0.1
+    ],
+    "right": [
+      0.16,
+      0.0,
+      -0.1
+    ]
+  },
+  "description": "Ouro Kronii Guardiana del Tiempo con tocado de manecillas y capa asimétrica.",
+  "pmx_absolute_path": "/home/victor/.gemini/antigravity/scratch/jarvis_assistant/ui/static/vrm_models/ouro_kronii/ouro_kronii.pmx",
+  "pmx_relative_path": "/models/pmx_models/ouro_kronii/ouro_kronii.pmx",
+  "file_hash": "9a8806e46b4c943acedefab8754004b4d0eb489c2119ef44d284ed793648acdc",
+  "file_size": 4958920
+}

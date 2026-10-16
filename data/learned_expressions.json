@@ -1,0 +1,186 @@
+{
+  "version": 1,
+  "total_interactions": 6,
+  "behaviors": {
+    "confident_maid_greeting": {
+      "name": "confident_maid_greeting",
+      "context": "greeting",
+      "blendshapes": {
+        "joy": 0.78,
+        "confidence": 0.85,
+        "surprised": 0.12,
+        "shy": 0.05
+      },
+      "asymmetry": {
+        "leftBrowY": 0.08,
+        "rightBrowY": 0.0,
+        "leftEyeWink": 0.0,
+        "pupilScale": 1.05
+      },
+      "posture": {
+        "hipSwayX": 0.04,
+        "spinePitch": 0.06,
+        "headTiltZ": 0.07,
+        "leftArmPitch": -0.35,
+        "rightArmPitch": -0.85
+      },
+      "elasticity": {
+        "stiffness": 14.5,
+        "damping": 0.42,
+        "squashFactor": 1.06
+      },
+      "emote": "✨",
+      "timestamp": 1728900000
+    },
+    "curious_screen_inspection": {
+      "name": "curious_screen_inspection",
+      "context": "reading",
+      "blendshapes": {
+        "joy": 0.25,
+        "curiosity": 0.92,
+        "surprised": 0.35,
+        "shy": 0.0
+      },
+      "asymmetry": {
+        "leftBrowY": 0.16,
+        "rightBrowY": -0.05,
+        "leftEyeWink": 0.0,
+        "pupilScale": 1.14
+      },
+      "posture": {
+        "hipSwayX": -0.03,
+        "spinePitch": 0.14,
+        "headTiltZ": -0.11,
+        "leftArmPitch": -0.18,
+        "rightArmPitch": -0.62
+      },
+      "elasticity": {
+        "stiffness": 12.0,
+        "damping": 0.48,
+        "squashFactor": 1.03
+      },
+      "emote": "❓",
+      "timestamp": 1728900060
+    },
+    "playful_zzz_bounce": {
+      "name": "playful_zzz_bounce",
+      "context": "playful",
+      "blendshapes": {
+        "joy": 0.94,
+        "curiosity": 0.4,
+        "surprised": 0.2,
+        "shy": 0.15
+      },
+      "asymmetry": {
+        "leftBrowY": 0.1,
+        "rightBrowY": 0.12,
+        "leftEyeWink": 0.18,
+        "pupilScale": 1.12
+      },
+      "posture": {
+        "hipSwayX": 0.08,
+        "spinePitch": -0.04,
+        "headTiltZ": 0.12,
+        "leftArmPitch": -0.55,
+        "rightArmPitch": -0.55
+      },
+      "elasticity": {
+        "stiffness": 16.5,
+        "damping": 0.36,
+        "squashFactor": 1.14
+      },
+      "emote": "🎵",
+      "timestamp": 1728900120
+    },
+    "urgent_tactical_alert": {
+      "name": "urgent_tactical_alert",
+      "context": "urgent",
+      "blendshapes": {
+        "joy": 0.0,
+        "curiosity": 0.65,
+        "surprised": 0.45,
+        "tension": 0.78
+      },
+      "asymmetry": {
+        "leftBrowY": -0.12,
+        "rightBrowY": -0.12,
+        "leftEyeWink": 0.0,
+        "pupilScale": 0.92
+      },
+      "posture": {
+        "hipSwayX": 0.0,
+        "spinePitch": 0.12,
+        "headTiltZ": 0.0,
+        "leftArmPitch": -0.3,
+        "rightArmPitch": -0.3
+      },
+      "elasticity": {
+        "stiffness": 19.0,
+        "damping": 0.5,
+        "squashFactor": 1.1
+      },
+      "emote": "❗",
+      "timestamp": 1728900180
+    },
+    "flustered_headpat_blush": {
+      "name": "flustered_headpat_blush",
+      "context": "affection",
+      "blendshapes": {
+        "joy": 0.82,
+        "shy": 0.9,
+        "surprised": 0.18,
+        "tension": 0.0
+      },
+      "asymmetry": {
+        "leftBrowY": -0.06,
+        "rightBrowY": -0.04,
+        "leftEyeWink": 0.0,
+        "pupilScale": 1.18
+      },
+      "posture": {
+        "hipSwayX": 0.05,
+        "spinePitch": 0.05,
+        "headTiltZ": 0.15,
+        "leftArmPitch": -0.42,
+        "rightArmPitch": -0.45
+      },
+      "elasticity": {
+        "stiffness": 11.5,
+        "damping": 0.44,
+        "squashFactor": 1.08
+      },
+      "emote": "💖",
+      "timestamp": 1728900240
+    },
+    "close_button_panic": {
+      "name": "close_button_panic",
+      "context": "panic",
+      "blendshapes": {
+        "joy": 0.0,
+        "surprised": 0.95,
+        "tension": 0.85,
+        "shy": 0.3
+      },
+      "asymmetry": {
+        "leftBrowY": 0.22,
+        "rightBrowY": 0.18,
+        "leftEyeWink": 0.0,
+        "pupilScale": 0.84
+      },
+      "posture": {
+        "hipSwayX": -0.06,
+        "spinePitch": -0.1,
+        "headTiltZ": -0.08,
+        "leftArmPitch": -1.15,
+        "rightArmPitch": -1.15
+      },
+      "elasticity": {
+        "stiffness": 18.0,
+        "damping": 0.34,
+        "squashFactor": 1.16
+      },
+      "emote": "💧",
+      "timestamp": 1728900300
+    }
+  }
+}
