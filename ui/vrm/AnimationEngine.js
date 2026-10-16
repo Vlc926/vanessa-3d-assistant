@@ -25,6 +25,49 @@ export class SpringDamper {
   }
 }
 
+export class PerlinNoise {
+  constructor(seed = 42) {
+    this.perm = new Uint8Array(512);
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    let s = (seed % 2147483647) || 42;
+    for (let i = 255; i > 0; i--) {
+      s = (s * 16807) % 2147483647;
+      const j = s % (i + 1);
+      const tmp = p[i];
+      p[i] = p[j];
+      p[j] = tmp;
+    }
+    for (let i = 0; i < 512; i++) {
+      this.perm[i] = p[i & 255];
+    }
+  }
+
+  noise2D(x, y) {
+    const X = Math.floor(x) & 255;
+    const Y = Math.floor(y) & 255;
+    const xf = x - Math.floor(x);
+    const yf = y - Math.floor(y);
+    const u = xf * xf * (3.0 - 2.0 * xf);
+    const v = yf * yf * (3.0 - 2.0 * yf);
+    const a = this.perm[X] + Y;
+    const aa = this.perm[a];
+    const ab = this.perm[a + 1];
+    const b = this.perm[X + 1] + Y;
+    const ba = this.perm[b];
+    const bb = this.perm[b + 1];
+    const grad = (hash, gx, gy) => {
+      const h = hash & 3;
+      const u1 = (h === 1 || h === 2) ? -gx : gx;
+      const v1 = (h === 2 || h === 3) ? -gy : gy;
+      return u1 + v1;
+    };
+    const x1 = THREE.MathUtils.lerp(grad(aa, xf, yf), grad(ba, xf - 1.0, yf), u);
+    const x2 = THREE.MathUtils.lerp(grad(ab, xf, yf - 1.0), grad(bb, xf - 1.0, yf - 1.0), u);
+    return THREE.MathUtils.lerp(x1, x2, v);
+  }
+}
+
 export class SmartLocomotionRouter {
   static evaluateRoute(distancePx, urgency = 0.2, tone = 'relaxed', windowGaps = 0) {
     const dist = Math.max(0.0, Number(distancePx) || 0.0);
@@ -64,17 +107,24 @@ export class SmartLocomotionRouter {
 export class AnimationEngine {
   constructor() {
     this.avatar = null;
+    this.facialDriver = null;
     this.cognitiveState = 'IDLE';
     this.physicalState = 'GROUNDED';
 
     this.breathTime = 0.0;
-    this.breathFreq = 0.25;
+    this.breathFreq = 0.24;
 
     this.idleTime = 0.0;
     this.blinkTimer = 3.0;
     this.isBlinking = false;
     this.blinkElapsed = 0.0;
-    this.blinkDuration = 0.18;
+    this.blinkDuration = 0.16;
+    this.isDoubleBlink = false;
+    this.doubleBlinkPending = false;
+    this.doubleBlinkGapTimer = 0.0;
+
+    this.perlin = new PerlinNoise(Math.floor(Math.random() * 65535));
+    this.perlinSeed = Math.random() * 100.0;
 
     this.targetEmotion = {
       joy: 0.0,
@@ -109,9 +159,8 @@ export class AnimationEngine {
     this.audioSource = null;
     this.audioFreqData = null;
     this.isAudioPlaying = false;
+    this.audioEnergySmooth = 0.0;
     this.visemeWeights = { aa: 0.0, ih: 0.0, ou: 0.0, ee: 0.0, oh: 0.0 };
-
-    this.perlinSeed = Math.random() * 100.0;
 
     this.torsoSpring = new SpringDamper(210.0, 13.5);
     this.hipsSpring = new SpringDamper(195.0, 14.0);
@@ -160,6 +209,10 @@ export class AnimationEngine {
     }
     this.torsoSpring.impulse(0.35);
     this.hipsSpring.impulse(0.25);
+  }
+
+  setFacialDriver(driver) {
+    this.facialDriver = driver;
   }
 
   setDirective(directive) {
@@ -348,10 +401,6 @@ export class AnimationEngine {
     } catch (e) {}
   }
 
-  _softNoise(t) {
-    return Math.sin(t) * 0.5 + Math.sin(t * 2.3 + 1.2) * 0.3 + Math.sin(t * 4.7 + 2.8) * 0.2;
-  }
-
   update(dt) {
     if (!this.avatar) return;
     const clampedDt = Math.min(0.045, dt);
@@ -511,12 +560,23 @@ export class AnimationEngine {
     this.idleTime += dt;
 
     const breath = Math.sin(this.breathTime);
+    const deepBreath = Math.sin(this.breathTime * 0.5) * 0.015;
+
+    const noiseSpine = this.perlin.noise2D(this.perlinSeed, this.idleTime * 0.35) * 0.025;
+    const noiseArmL = this.perlin.noise2D(this.perlinSeed + 10.0, this.idleTime * 0.45) * 0.035;
+    const noiseArmR = this.perlin.noise2D(this.perlinSeed + 20.0, this.idleTime * 0.45) * 0.035;
+    const noiseHandL = this.perlin.noise2D(this.perlinSeed + 30.0, this.idleTime * 0.60) * 0.040;
+    const noiseHandR = this.perlin.noise2D(this.perlinSeed + 40.0, this.idleTime * 0.60) * 0.040;
 
     const spine = this.avatar.getBone('spine');
     const chest = this.avatar.getBone('chest');
     const lShoulder = this.avatar.getBone('leftShoulder');
     const rShoulder = this.avatar.getBone('rightShoulder');
     const hips = this.avatar.getBone('hips');
+    const lUpperArm = this.avatar.getBone('leftUpperArm');
+    const rUpperArm = this.avatar.getBone('rightUpperArm');
+    const lHand = this.avatar.getBone('leftHand');
+    const rHand = this.avatar.getBone('rightHand');
     const lUpperLeg = this.avatar.getBone('leftUpperLeg');
     const rUpperLeg = this.avatar.getBone('rightUpperLeg');
     const lLowerLeg = this.avatar.getBone('leftLowerLeg');
@@ -527,24 +587,50 @@ export class AnimationEngine {
     const extraChestPitch = fb && fb.chest ? (fb.chest.pitch || 0.0) : 0.0;
     const extraKneeFlex = fb && fb.legs ? (fb.legs.knee_flex || 0.05) : 0.05;
 
+    const hipSway = Math.sin(this.idleTime * 0.85) * 0.024;
+    const contrappostoRoll = -hipSway * 0.65;
+
     if (spine) {
-      spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, breath * 0.022 + extraSpinePitch, 6.0, dt);
-      spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, Math.sin(this.idleTime * 0.7) * 0.015, 4.0, dt);
+      spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, breath * 0.022 + deepBreath + extraSpinePitch, 6.0, dt);
+      spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, noiseSpine + contrappostoRoll * 0.5, 4.0, dt);
+      spine.rotation.y = THREE.MathUtils.damp(spine.rotation.y, Math.sin(this.idleTime * 0.5) * 0.015, 3.5, dt);
     }
     if (chest) {
-      chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, breath * 0.035 + extraChestPitch, 6.0, dt);
+      chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, breath * 0.038 + deepBreath * 1.5 + extraChestPitch, 6.0, dt);
+      chest.rotation.z = THREE.MathUtils.damp(chest.rotation.z, contrappostoRoll, 4.0, dt);
     }
     if (lShoulder) {
-      lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, -0.04 + breath * 0.015, 5.0, dt);
+      lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, -0.04 + breath * 0.018 - contrappostoRoll * 0.4, 5.0, dt);
+      lShoulder.rotation.y = THREE.MathUtils.damp(lShoulder.rotation.y, noiseArmL * 0.5, 4.0, dt);
     }
     if (rShoulder) {
-      rShoulder.rotation.z = THREE.MathUtils.damp(rShoulder.rotation.z, 0.04 - breath * 0.015, 5.0, dt);
+      rShoulder.rotation.z = THREE.MathUtils.damp(rShoulder.rotation.z, 0.04 - breath * 0.018 - contrappostoRoll * 0.4, 5.0, dt);
+      rShoulder.rotation.y = THREE.MathUtils.damp(rShoulder.rotation.y, -noiseArmR * 0.5, 4.0, dt);
     }
     if (hips) {
-      const hipSway = Math.sin(this.idleTime * 0.85) * 0.020;
       hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, hipSway, 4.0, dt);
       hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, hipSway * 0.6, 4.0, dt);
     }
+
+    if (this.gestureWeight <= 0.001 && !this.isWindowMoving && this.physicalState === 'GROUNDED') {
+      if (lUpperArm) {
+        lUpperArm.rotation.z = THREE.MathUtils.damp(lUpperArm.rotation.z, -0.72 + noiseArmL, 4.0, dt);
+        lUpperArm.rotation.x = THREE.MathUtils.damp(lUpperArm.rotation.x, 0.05 + breath * 0.012, 4.0, dt);
+      }
+      if (rUpperArm) {
+        rUpperArm.rotation.z = THREE.MathUtils.damp(rUpperArm.rotation.z, 0.72 - noiseArmR, 4.0, dt);
+        rUpperArm.rotation.x = THREE.MathUtils.damp(rUpperArm.rotation.x, 0.05 + breath * 0.012, 4.0, dt);
+      }
+      if (lHand) {
+        lHand.rotation.z = THREE.MathUtils.damp(lHand.rotation.z, noiseHandL, 5.0, dt);
+        lHand.rotation.x = THREE.MathUtils.damp(lHand.rotation.x, noiseHandL * 0.6, 5.0, dt);
+      }
+      if (rHand) {
+        rHand.rotation.z = THREE.MathUtils.damp(rHand.rotation.z, -noiseHandR, 5.0, dt);
+        rHand.rotation.x = THREE.MathUtils.damp(rHand.rotation.x, noiseHandR * 0.6, 5.0, dt);
+      }
+    }
+
     if (!this.isWindowMoving && this.physicalState === 'GROUNDED') {
       if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -extraKneeFlex * 0.5, 5.0, dt);
       if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -extraKneeFlex * 0.5, 5.0, dt);
@@ -552,29 +638,56 @@ export class AnimationEngine {
       if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, extraKneeFlex, 5.0, dt);
     }
 
+    this._updateStochasticBlink(dt);
+  }
+
+  _updateStochasticBlink(dt) {
+    if (this.headpatActive) return;
+
+    if (this.doubleBlinkPending) {
+      this.doubleBlinkGapTimer -= dt;
+      if (this.doubleBlinkGapTimer <= 0.0) {
+        this.doubleBlinkPending = false;
+        this.isBlinking = true;
+        this.blinkElapsed = 0.0;
+        this.blinkDuration = 0.14;
+      }
+      return;
+    }
+
     this.blinkTimer -= dt;
-    if (this.blinkTimer <= 0.0 && !this.isBlinking && !this.headpatActive) {
+    if (this.blinkTimer <= 0.0 && !this.isBlinking) {
       if (this.currentEmotion.joy < 0.70) {
         this.isBlinking = true;
         this.blinkElapsed = 0.0;
+        this.blinkDuration = 0.15;
+        this.isDoubleBlink = Math.random() < 0.16;
       } else {
-        this.blinkTimer = 2.0 + Math.random() * 2.5;
+        this.blinkTimer = 2.2 + Math.random() * 2.8;
       }
     }
-    if (this.isBlinking && !this.headpatActive) {
+
+    if (this.isBlinking) {
       this.blinkElapsed += dt;
       const progress = this.blinkElapsed / this.blinkDuration;
       let blinkVal = 0.0;
-      if (progress <= 0.5) {
-        blinkVal = progress / 0.5;
+      if (progress <= 0.35) {
+        blinkVal = progress / 0.35;
       } else if (progress <= 1.0) {
-        blinkVal = 1.0 - ((progress - 0.5) / 0.5);
+        const p = (progress - 0.35) / 0.65;
+        blinkVal = 1.0 - Math.pow(p, 1.4);
       } else {
         this.isBlinking = false;
-        this.blinkTimer = 2.5 + Math.random() * 3.5;
         blinkVal = 0.0;
+        if (this.isDoubleBlink) {
+          this.isDoubleBlink = false;
+          this.doubleBlinkPending = true;
+          this.doubleBlinkGapTimer = 0.11;
+        } else {
+          this.blinkTimer = 2.2 + Math.random() * 3.6;
+        }
       }
-      this.avatar.setExpression('blink', blinkVal);
+      this.avatar.setExpression('blink', Math.max(0.0, Math.min(1.0, blinkVal)));
     }
   }
 
@@ -598,8 +711,10 @@ export class AnimationEngine {
       this.lookTarget.set(0.5, 0.45, 2.5);
       this.avatar.setExpression('shy', 0.15);
     } else if (this.cognitiveState === 'SPEAKING') {
-      const speechBob = Math.sin(this.idleTime * 4.2) * 0.035;
+      const speechBob = Math.sin(this.idleTime * 4.6) * 0.042;
+      const speechSide = Math.sin(this.idleTime * 2.3) * 0.020;
       targetHeadPitchX = speechBob;
+      targetHeadTiltZ = speechSide;
       this.lookTarget.set(0.0, 0.0, 2.8);
     }
 
@@ -621,12 +736,16 @@ export class AnimationEngine {
   _updateLayer2Gestures(dt) {
     this.gestureTime += dt;
     const progress = Math.min(1.0, this.gestureTime / this.gestureDuration);
-    if (progress <= 0.20) {
-      this.gestureWeight = THREE.MathUtils.damp(this.gestureWeight, progress / 0.20, 10.0, dt);
-    } else if (progress <= 0.80) {
+    if (progress <= 0.18) {
+      const p = progress / 0.18;
+      const easeIn = p * p * (3.0 - 2.0 * p);
+      this.gestureWeight = THREE.MathUtils.damp(this.gestureWeight, easeIn, 12.0, dt);
+    } else if (progress <= 0.82) {
       this.gestureWeight = 1.0;
     } else if (progress < 1.0) {
-      this.gestureWeight = THREE.MathUtils.damp(this.gestureWeight, (1.0 - progress) / 0.20, 8.0, dt);
+      const p = (1.0 - progress) / 0.18;
+      const easeOut = p * p * (3.0 - 2.0 * p);
+      this.gestureWeight = THREE.MathUtils.damp(this.gestureWeight, easeOut, 10.0, dt);
     } else {
       this.gestureWeight = 0.0;
       this.activeGesture = 'idle';
@@ -636,6 +755,8 @@ export class AnimationEngine {
     const rArm = this.avatar.getBone('rightUpperArm');
     const lForearm = this.avatar.getBone('leftLowerArm');
     const rForearm = this.avatar.getBone('rightLowerArm');
+    const lShoulder = this.avatar.getBone('leftShoulder');
+    const rShoulder = this.avatar.getBone('rightShoulder');
 
     if (this.gestureWeight <= 0.001) {
       if (!this.isWindowMoving && this.physicalState === 'GROUNDED') {
@@ -649,22 +770,25 @@ export class AnimationEngine {
     const w = this.gestureWeight;
 
     if (this.activeGesture === 'explain_open_hands') {
+      if (lShoulder) lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, -0.06 * w, 6.0, dt);
+      if (rShoulder) rShoulder.rotation.z = THREE.MathUtils.damp(rShoulder.rotation.z, 0.06 * w, 6.0, dt);
       if (lArm) {
-        lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, -0.35, 6.0, dt);
-        lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.65, 6.0, dt);
+        lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, -0.35 * w, 6.0, dt);
+        lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.65 * w, 6.0, dt);
       }
       if (rArm) {
-        rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, -0.35, 6.0, dt);
-        rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.65, 6.0, dt);
+        rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, -0.35 * w, 6.0, dt);
+        rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.65 * w, 6.0, dt);
       }
-      if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.60, 6.0, dt);
-      if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.60, 6.0, dt);
+      if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.60 * w, 6.0, dt);
+      if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.60 * w, 6.0, dt);
     } else if (this.activeGesture === 'nod') {
       const head = this.avatar.getBone('head');
       if (head) {
         head.rotation.x = THREE.MathUtils.damp(head.rotation.x, Math.sin(this.gestureTime * 7.5) * 0.16 * w, 8.0, dt);
       }
     } else if (this.activeGesture === 'greet' || this.activeGesture === 'wave') {
+      if (rShoulder) rShoulder.rotation.z = THREE.MathUtils.damp(rShoulder.rotation.z, 0.08 * w, 6.0, dt);
       if (rArm) {
         rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, -0.85 * w, 6.0, dt);
         rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, -0.55 * w, 6.0, dt);
@@ -683,6 +807,8 @@ export class AnimationEngine {
         rForearm.rotation.y = THREE.MathUtils.damp(rForearm.rotation.y, 0.35 * w, 6.0, dt);
       }
     } else if (this.activeGesture === 'shock') {
+      if (lShoulder) lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, -0.09 * w, 10.0, dt);
+      if (rShoulder) rShoulder.rotation.z = THREE.MathUtils.damp(rShoulder.rotation.z, 0.09 * w, 10.0, dt);
       if (lArm) lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.30 * w, 10.0, dt);
       if (rArm) rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.30 * w, 10.0, dt);
       if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.90 * w, 10.0, dt);
@@ -729,16 +855,30 @@ export class AnimationEngine {
         6.0,
         dt
       );
-      if (key === 'joy') {
-        this.avatar.setExpression('joy', this.currentEmotion.joy);
-      } else if (key === 'curiosity') {
-        this.avatar.setExpression('surprised', this.currentEmotion.curiosity * 0.6);
-      } else if (key === 'surprise') {
-        this.avatar.setExpression('surprised', this.currentEmotion.surprise);
-      } else if (key === 'tension') {
-        this.avatar.setExpression('angry', this.currentEmotion.tension * 0.8);
-      } else if (key === 'shyness') {
-        this.avatar.setExpression('shy', this.currentEmotion.shyness);
+      if (this.facialDriver && typeof this.facialDriver.setMorph === 'function') {
+        if (key === 'joy') {
+          this.facialDriver.setMorph('happy', this.currentEmotion.joy);
+        } else if (key === 'curiosity') {
+          this.facialDriver.setMorph('surprised', this.currentEmotion.curiosity * 0.6);
+        } else if (key === 'surprise') {
+          this.facialDriver.setMorph('surprised', this.currentEmotion.surprise);
+        } else if (key === 'tension') {
+          this.facialDriver.setMorph('angry', this.currentEmotion.tension * 0.8);
+        } else if (key === 'shyness') {
+          this.facialDriver.setMorph('shy', this.currentEmotion.shyness);
+        }
+      } else {
+        if (key === 'joy') {
+          this.avatar.setExpression('joy', this.currentEmotion.joy);
+        } else if (key === 'curiosity') {
+          this.avatar.setExpression('surprised', this.currentEmotion.curiosity * 0.6);
+        } else if (key === 'surprise') {
+          this.avatar.setExpression('surprised', this.currentEmotion.surprise);
+        } else if (key === 'tension') {
+          this.avatar.setExpression('angry', this.currentEmotion.tension * 0.8);
+        } else if (key === 'shyness') {
+          this.avatar.setExpression('shy', this.currentEmotion.shyness);
+        }
       }
     }
   }
@@ -746,8 +886,12 @@ export class AnimationEngine {
   _updateLayer4LipSync(dt) {
     if (!this.isAudioPlaying || !this.analyser || !this.audioFreqData) {
       for (const v of ['aa', 'ih', 'ou', 'ee', 'oh']) {
-        this.visemeWeights[v] = THREE.MathUtils.damp(this.visemeWeights[v], 0.0, 12.0, dt);
-        this.avatar.setViseme(v, this.visemeWeights[v]);
+        this.visemeWeights[v] = THREE.MathUtils.damp(this.visemeWeights[v], 0.0, 14.0, dt);
+        if (this.facialDriver && typeof this.facialDriver.setViseme === 'function') {
+          this.facialDriver.setViseme(v, this.visemeWeights[v]);
+        } else {
+          this.avatar.setViseme(v, this.visemeWeights[v]);
+        }
       }
       return;
     }
@@ -778,16 +922,20 @@ export class AnimationEngine {
     const maxEnergy = Math.max(energyAa, energyEe, energyIh, energyOh, energyOu);
     const scale = maxEnergy > 0.08 ? 1.25 : 0.0;
 
-    this.visemeWeights.aa = THREE.MathUtils.damp(this.visemeWeights.aa, energyAa * scale, 15.0, dt);
-    this.visemeWeights.ee = THREE.MathUtils.damp(this.visemeWeights.ee, energyEe * scale, 15.0, dt);
-    this.visemeWeights.ih = THREE.MathUtils.damp(this.visemeWeights.ih, energyIh * scale, 15.0, dt);
-    this.visemeWeights.oh = THREE.MathUtils.damp(this.visemeWeights.oh, energyOh * scale, 15.0, dt);
-    this.visemeWeights.ou = THREE.MathUtils.damp(this.visemeWeights.ou, energyOu * scale, 15.0, dt);
+    this.audioEnergySmooth = THREE.MathUtils.damp(this.audioEnergySmooth, maxEnergy, 10.0, dt);
 
-    this.avatar.setViseme('aa', this.visemeWeights.aa);
-    this.avatar.setViseme('ee', this.visemeWeights.ee);
-    this.avatar.setViseme('ih', this.visemeWeights.ih);
-    this.avatar.setViseme('oh', this.visemeWeights.oh);
-    this.avatar.setViseme('ou', this.visemeWeights.ou);
+    this.visemeWeights.aa = THREE.MathUtils.damp(this.visemeWeights.aa, energyAa * scale, 18.0, dt);
+    this.visemeWeights.ee = THREE.MathUtils.damp(this.visemeWeights.ee, energyEe * scale, 18.0, dt);
+    this.visemeWeights.ih = THREE.MathUtils.damp(this.visemeWeights.ih, energyIh * scale, 18.0, dt);
+    this.visemeWeights.oh = THREE.MathUtils.damp(this.visemeWeights.oh, energyOh * scale, 18.0, dt);
+    this.visemeWeights.ou = THREE.MathUtils.damp(this.visemeWeights.ou, energyOu * scale, 18.0, dt);
+
+    for (const v of ['aa', 'ee', 'ih', 'oh', 'ou']) {
+      if (this.facialDriver && typeof this.facialDriver.setViseme === 'function') {
+        this.facialDriver.setViseme(v, this.visemeWeights[v]);
+      } else {
+        this.avatar.setViseme(v, this.visemeWeights[v]);
+      }
+    }
   }
 }

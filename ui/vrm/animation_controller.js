@@ -196,7 +196,7 @@ export class AnimationController {
         nextAction.setEffectiveTimeScale(speed);
         nextAction.setEffectiveWeight(1.0);
         nextAction.enabled = true;
-        const trans = customTransition !== null ? customTransition : (isLoop ? 0.40 : 0.32);
+        const trans = customTransition !== null ? customTransition : (isLoop ? 0.30 : 0.28);
         const prevAction = this.currentAction;
         nextAction.reset();
         if (prevAction && prevAction !== nextAction) {
@@ -215,12 +215,12 @@ export class AnimationController {
             this.bridge.on_animation_started(normName, clipDur);
         }
         if (!isLoop) {
-            const returnCrossfade = Math.min(0.45, clipDur * 0.25);
+            const returnCrossfade = Math.min(0.32, clipDur * 0.25);
             const delayMs = Math.max(300, (clipDur - returnCrossfade) * 1000);
             this.pendingReturnTimer = setTimeout(() => {
                 this.pendingReturnTimer = null;
                 if (this.currentMotionName === normName) {
-                    this.playMotion(this.standbyName, 0.45);
+                    this.playMotion(this.standbyName, 0.30);
                 }
             }, delayMs);
             this.activeFinishedListener = (e) => {
@@ -233,7 +233,7 @@ export class AnimationController {
                         this.bridge.on_animation_finished(normName);
                     }
                     if (this.currentMotionName === normName) {
-                        this.playMotion(this.standbyName, 0.45);
+                        this.playMotion(this.standbyName, 0.30);
                     }
                 }
             };

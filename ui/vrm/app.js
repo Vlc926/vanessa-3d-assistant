@@ -87,6 +87,7 @@ let currentVrm = null;
 let currentExternalMesh = null;
 let currentAvatarAdapter = null;
 const animationEngine = new AnimationEngine();
+animationEngine.setFacialDriver(animeFacialDriver);
 let directiveSocket = null;
 let directiveReconnectTimer = null;
 let avatarMode = 'standard';
@@ -135,6 +136,10 @@ export function setExpression(name, weight = 1.0) {
     if (!currentVrm) return;
     const lower = (name || 'neutral').toLowerCase();
     const w = Math.max(0, Math.min(1, Number(weight) || 0));
+
+    if (animeFacialDriver) {
+        animeFacialDriver.setAsymmetricPreset(lower, w);
+    }
 
     if (currentVrm.isMmd && dedicatedPmxController) {
         dedicatedPmxController.setExpression(lower, w);
@@ -1003,6 +1008,14 @@ function initDirectiveSocket(port = 8765) {
                         updateHudStateBadge(data.state);
                     }
                     animationEngine.setDirective(data);
+                    if (data.facial_preset) {
+                        animeFacialDriver.setAsymmetricPreset(data.facial_preset, data.facial_intensity || 1.0);
+                    } else if (data.emotion_vector) {
+                        const topEmo = Object.entries(data.emotion_vector).sort((a, b) => b[1] - a[1])[0];
+                        if (topEmo && topEmo[1] > 0.35) {
+                            animeFacialDriver.setAsymmetricPreset(topEmo[0], topEmo[1]);
+                        }
+                    }
                 }
             } catch (e) {}
         };

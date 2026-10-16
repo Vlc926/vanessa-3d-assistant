@@ -177,15 +177,23 @@ class VRMWidget(QWidget):
             self.bridge.start_talking()
         else:
             self.bridge.stop_talking()
+        try:
+            from core.avatar_directive_server import AvatarDirectiveServer
+            server = AvatarDirectiveServer.get_instance()
+            server.set_state("SPEAKING" if is_speaking else "IDLE")
+        except Exception:
+            pass
 
     def set_expression(self, name: str, weight: float = 1.0):
         self.bridge.set_expression(name, weight)
+        self._run_js_safe(f"window.vrmController && window.vrmController.setAsymmetricFacialPreset && window.vrmController.setAsymmetricFacialPreset('{name}', {weight});")
 
     def set_morph_target(self, name: str, weight: float = 1.0):
         self.bridge.set_morph_target(name, weight)
 
     def set_emotion(self, mood: str, weight: float = 1.0):
         self.bridge.set_expression(mood, weight)
+        self._run_js_safe(f"window.vrmController && window.vrmController.setAsymmetricFacialPreset && window.vrmController.setAsymmetricFacialPreset('{mood}', {weight});")
 
     def start_motion(self, motion_name: str):
         self._run_js_safe(f"window.vrmController && window.vrmController.playMotion('{motion_name}');")

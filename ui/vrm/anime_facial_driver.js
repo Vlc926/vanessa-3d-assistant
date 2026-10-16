@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ExpressionBlender } from './ExpressionBlender.js';
 
 export class AnimeFacialDriver {
     constructor() {
@@ -6,6 +7,8 @@ export class AnimeFacialDriver {
         this.enabled = true;
         this.snapThreshold = 0.72;
         this.blendSpeed = 14.0;
+
+        this.blender = new ExpressionBlender();
 
         this.targetMorphs = new Map();
         this.currentMorphs = new Map();
@@ -123,7 +126,8 @@ export class AnimeFacialDriver {
             ih: ['ih', 'I', 'Fcl_MTH_I', 'い'],
             ou: ['ou', 'U', 'Fcl_MTH_U', 'う'],
             ee: ['ee', 'E', 'Fcl_MTH_E', 'え'],
-            oh: ['oh', 'O', 'Fcl_MTH_O', 'お']
+            oh: ['oh', 'O', 'Fcl_MTH_O', 'お'],
+            shy: ['shy', '照れ', 'テレ', '赤面', 'チーク', 'Blush']
         };
 
         this.loadLearnedBehaviors();
@@ -139,6 +143,9 @@ export class AnimeFacialDriver {
                     for (const item of data.learned_expressions) {
                         if (item && item.id && item.morphs) {
                             this.asymmetricPresets[item.id] = item.morphs;
+                            if (this.blender && this.blender.presets) {
+                                this.blender.presets[item.id] = item.morphs;
+                            }
                         }
                     }
                 }
@@ -155,6 +162,9 @@ export class AnimeFacialDriver {
         }
         const id = `synth_${basePresetName}_${Date.now()}`;
         this.asymmetricPresets[id] = morphs;
+        if (this.blender && this.blender.presets) {
+            this.blender.presets[id] = morphs;
+        }
         const entry = {
             id,
             context: basePresetName,
@@ -184,6 +194,7 @@ export class AnimeFacialDriver {
         this.currentMorphs.clear();
         this.meshMorphMap.clear();
         this.supportedExpressions.clear();
+        this.blender.reset();
         this.secondaryFacialBones = { jaw: null, tongue: null, leftCheek: null, rightCheek: null, leftEye: null, rightEye: null };
         if (!vrm) return;
 
@@ -229,7 +240,7 @@ export class AnimeFacialDriver {
                 'happy', 'joy', 'angry', 'sad', 'sorrow', 'relaxed', 'fun', 'surprised', 'neutral',
                 'blink', 'blinkLeft', 'blinkRight', 'Blink', 'Blink_L', 'Blink_R',
                 'Joy', 'Angry', 'Sorrow', 'Fun', 'Surprised', 'Neutral',
-                'aa', 'ih', 'ou', 'ee', 'oh', 'A', 'I', 'U', 'E', 'O', 'Extra'
+                'aa', 'ih', 'ou', 'ee', 'oh', 'A', 'I', 'U', 'E', 'O', 'Extra', 'shy'
             ];
             candidateNames.forEach(name => {
                 try {
@@ -275,13 +286,17 @@ export class AnimeFacialDriver {
     }
 
     setAsymmetricPreset(name, intensity = 1.0) {
-        const preset = this.asymmetricPresets[name];
-        if (!preset) return;
+        const factor = Math.max(0.0, Math.min(1.0, Number(intensity) || 0.0));
+        this.blender.setEmotion(name, factor, 0.32);
 
-        const factor = Math.max(0.0, Math.min(1.0, intensity));
-        for (const [morphKey, targetVal] of Object.entries(preset)) {
-            this.setMorph(morphKey, targetVal * factor, factor >= this.snapThreshold);
+        const customPreset = this.asymmetricPresets[name];
+        if (customPreset) {
+            for (const [morphKey, targetVal] of Object.entries(customPreset)) {
+                this.blender.setMorph(morphKey, targetVal * factor, factor >= this.snapThreshold, 0.30);
+                this.targetMorphs.set(morphKey, targetVal * factor);
+            }
         }
+
         if (name === 'shocked') {
             this.targetPupilScale = 0.82;
             this.targetSecondaryState.jawPitch = 0.18 * factor;
@@ -296,8 +311,16 @@ export class AnimeFacialDriver {
     }
 
     applyCoordinatedBodyPosture(presetName, factor = 1.0) {
-        if (!this.vrm || !this.vrm.humanoid) return;
-        const getBone = (bName) => this.vrm.humanoid.getNormalizedBoneNode(bName) || this.vrm.humanoid.getRawBoneNode(bName);
+        if (!this.vrm) return;
+        const getBone = (bName) => {
+            if (typeof this.vrm.getBone === 'function') {
+                return this.vrm.getBone(bName);
+            }
+            if (this.vrm.humanoid) {
+                return this.vrm.humanoid.getNormalizedBoneNode(bName) || this.vrm.humanoid.getRawBoneNode(bName);
+            }
+            return null;
+        };
         const spine = getBone('spine');
         const chest = getBone('chest');
         const head = getBone('head');
@@ -325,6 +348,7 @@ export class AnimeFacialDriver {
     setMorph(name, weight, snap = false) {
         const target = Math.max(0.0, Math.min(1.0, Number(weight) || 0.0));
         this.targetMorphs.set(name, target);
+        this.blender.setMorph(name, target, snap, 0.30);
 
         if (snap) {
             this.currentMorphs.set(name, target);
@@ -332,16 +356,22 @@ export class AnimeFacialDriver {
         }
     }
 
+    setViseme(name, weight) {
+        this.blender.setViseme(name, weight);
+    }
+
     resetMorphs() {
         this.targetMorphs.forEach((_, key) => {
             this.targetMorphs.set(key, 0.0);
         });
+        this.blender.reset();
     }
 
     setDecoupledGaze(x, y, instant = false) {
         const clampX = Math.max(-0.6, Math.min(0.6, Number(x) || 0.0));
         const clampY = Math.max(-0.4, Math.min(0.4, Number(y) || 0.0));
         this.targetPupilOffset.set(clampX, clampY);
+        this.blender.setDecoupledGaze(clampX, clampY, instant);
 
         if (instant) {
             this.leftPupilOffset.copy(this.targetPupilOffset);
@@ -350,21 +380,28 @@ export class AnimeFacialDriver {
     }
 
     update(dt) {
-        if (!this.enabled || !this.vrm || !this.vrm.scene) return;
+        if (!this.enabled || !this.vrm) return;
 
         const safeDt = Math.max(0.001, Math.min(0.05, dt));
+        this.blender.update(safeDt);
 
-        this.leftPupilOffset.lerp(this.targetPupilOffset, Math.min(1.0, safeDt * 24.0));
-        this.rightPupilOffset.lerp(this.targetPupilOffset, Math.min(1.0, safeDt * 24.0));
-        this.pupilScale = THREE.MathUtils.damp(this.pupilScale, this.targetPupilScale, 10.0, safeDt);
+        const offsets = this.blender.getSecondaryBoneOffsets();
+
+        this.leftPupilOffset.lerp(offsets.pupilOffset, Math.min(1.0, safeDt * 24.0));
+        this.rightPupilOffset.lerp(offsets.pupilOffset, Math.min(1.0, safeDt * 24.0));
+        this.pupilScale = THREE.MathUtils.damp(this.pupilScale, offsets.pupilScale, 10.0, safeDt);
 
         if (this.secondaryFacialBones.jaw) {
-            this.secondaryFacialBones.jaw.rotation.x = THREE.MathUtils.damp(
-                this.secondaryFacialBones.jaw.rotation.x,
-                this.targetSecondaryState.jawPitch,
-                12.0,
-                safeDt
-            );
+            this.secondaryFacialBones.jaw.rotation.x = offsets.jawPitch;
+            if (this.secondaryFacialBones.jaw.position) {
+                this.secondaryFacialBones.jaw.position.z = offsets.jawForward;
+            }
+        }
+        if (this.secondaryFacialBones.leftCheek && this.secondaryFacialBones.leftCheek.scale) {
+            this.secondaryFacialBones.leftCheek.scale.setScalar(offsets.leftCheekScale);
+        }
+        if (this.secondaryFacialBones.rightCheek && this.secondaryFacialBones.rightCheek.scale) {
+            this.secondaryFacialBones.rightCheek.scale.setScalar(offsets.rightCheekScale);
         }
         if (this.secondaryFacialBones.leftEye && this.secondaryFacialBones.leftEye.scale) {
             this.secondaryFacialBones.leftEye.scale.setScalar(this.pupilScale);
@@ -373,22 +410,55 @@ export class AnimeFacialDriver {
             this.secondaryFacialBones.rightEye.scale.setScalar(this.pupilScale);
         }
 
+        const getBone = (bName) => {
+            if (typeof this.vrm.getBone === 'function') {
+                return this.vrm.getBone(bName);
+            }
+            if (this.vrm.humanoid) {
+                return this.vrm.humanoid.getNormalizedBoneNode(bName) || this.vrm.humanoid.getRawBoneNode(bName);
+            }
+            return null;
+        };
+
+        const neck = getBone('neck');
+        const head = getBone('head');
+        if (neck) {
+            neck.rotation.x = THREE.MathUtils.damp(neck.rotation.x, offsets.neckPitch, 8.0, safeDt);
+            neck.rotation.y = THREE.MathUtils.damp(neck.rotation.y, offsets.neckYaw, 8.0, safeDt);
+            neck.rotation.z = THREE.MathUtils.damp(neck.rotation.z, offsets.neckRoll, 8.0, safeDt);
+        }
+        if (head) {
+            head.rotation.x = THREE.MathUtils.damp(head.rotation.x, offsets.headPitch, 8.0, safeDt);
+            head.rotation.y = THREE.MathUtils.damp(head.rotation.y, offsets.headYaw, 8.0, safeDt);
+            head.rotation.z = THREE.MathUtils.damp(head.rotation.z, offsets.headRoll, 8.0, safeDt);
+        }
+
         this.microTimer += safeDt;
         this.microBrowOffset = Math.sin(this.microTimer * 0.8) * 0.04;
         this.microSmileOffset = Math.max(0.0, Math.sin(this.microTimer * 0.4) * 0.06);
 
-        this.targetMorphs.forEach((targetWeight, morphName) => {
-            let current = this.currentMorphs.get(morphName) || 0.0;
-            let finalTarget = targetWeight;
-
+        const computed = this.blender.getComputedMorphs();
+        computed.forEach((val, morphName) => {
+            let finalVal = val;
             if (morphName === 'happy' || morphName === 'joy') {
-                finalTarget = Math.min(1.0, finalTarget + this.microSmileOffset);
+                finalVal = Math.min(1.0, finalVal + this.microSmileOffset);
             }
+            this.currentMorphs.set(morphName, finalVal);
+            this._applyRawMorph(morphName, finalVal);
+        });
 
-            if (Math.abs(current - finalTarget) > 0.002) {
-                current += (finalTarget - current) * Math.min(1.0, safeDt * this.blendSpeed);
-                this.currentMorphs.set(morphName, current);
-                this._applyRawMorph(morphName, current);
+        this.targetMorphs.forEach((targetWeight, morphName) => {
+            if (!computed.has(morphName)) {
+                let current = this.currentMorphs.get(morphName) || 0.0;
+                let finalTarget = targetWeight;
+                if (morphName === 'happy' || morphName === 'joy') {
+                    finalTarget = Math.min(1.0, finalTarget + this.microSmileOffset);
+                }
+                if (Math.abs(current - finalTarget) > 0.002) {
+                    current += (finalTarget - current) * Math.min(1.0, safeDt * this.blendSpeed);
+                    this.currentMorphs.set(morphName, current);
+                    this._applyRawMorph(morphName, current);
+                }
             }
         });
     }
@@ -421,6 +491,13 @@ export class AnimeFacialDriver {
                     }
                 }
             }
+        }
+
+        if (typeof this.vrm.setExpression === 'function') {
+            try {
+                this.vrm.setExpression(name, clampedWeight);
+                applied = true;
+            } catch (e) {}
         }
 
         if (this.meshMorphMap.has(lower)) {
