@@ -357,6 +357,10 @@ export class DedicatedPMXController {
         this.applyRestPose(vrm);
     }
 
+    applyNaturalPostureInitializer(vrm) {
+        this.applyRestPose(vrm);
+    }
+
     optimizeMeshMaterials(mesh) {
         if (!mesh) return;
         mesh.traverse((node) => {

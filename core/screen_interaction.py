@@ -418,6 +418,7 @@ class ScreenInteractor(QObject):
             ])
 
         if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
+            self._apply_ik_hand_reach(int(ov.x() + ov.width() * 0.5), int(ov.y() + ov.height() * 0.4))
             ov.vrm_widget.start_motion(gesture)
             ov.vrm_widget.set_expression("happy", 0.9)
 
@@ -474,6 +475,7 @@ class ScreenInteractor(QObject):
             shortcut = "Return"
 
         def _on_btn_arrived():
+            self._apply_ik_hand_reach(tx, ty)
             if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
                 ov.vrm_widget.start_motion("button_tap")
                 ov.vrm_widget.set_expression("happy")

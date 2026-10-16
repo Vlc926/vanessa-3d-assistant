@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "evolution_count": 4,
+  "evolution_count": 5,
   "learned_expressions": [
     {
       "id": "synth_joy_curious_01",
@@ -69,6 +69,27 @@
       "id": "test_evo_1",
       "emotion": "joy",
       "posture": "confident_sway"
+    },
+    {
+      "id": "synth_1792167875710_452",
+      "context": "idle",
+      "morphs": {
+        "happy": 0.075,
+        "surprised": 0,
+        "relaxed": 0.275,
+        "shy": 0
+      },
+      "secondary_bones": {
+        "jawOpen": 0,
+        "pupilScale": 1,
+        "browAsymmetry": 0
+      },
+      "body_posture": {
+        "spinePitch": 0,
+        "headTiltZ": 0,
+        "shoulderLift": 0,
+        "clip": "idle"
+      }
     }
   ]
 }

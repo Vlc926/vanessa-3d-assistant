@@ -1440,6 +1440,7 @@ Reglas:
                     extra = {"backend": f"gemini-cloud ({active_model})", "tone": detected_tone}
                     if extra_action:
                         extra.update(extra_action)
+                    self.synthesize_evolutionary_behavior(mood, clean_text, context="user_interaction")
                     return clean_text, mood, extra
             except Exception as e:
                 print(f"[Brain] Error con Gemini Cloud: {e}. Fallback a motor local...")
@@ -1447,7 +1448,47 @@ Reglas:
         offline_reply, offline_mood = self._generate_offline_response(user_message, detected_tone, recognized_user)
         self.memory.add_message("user", user_message)
         self.memory.add_message("assistant", offline_reply, mood=offline_mood)
+        self.synthesize_evolutionary_behavior(offline_mood, offline_reply, context="offline_interaction")
         return offline_reply, offline_mood, {"backend": "local-offline", "tone": detected_tone}
+
+    def synthesize_evolutionary_behavior(self, mood: str, text: str = "", context: str = "dialogue") -> Optional[Dict[str, Any]]:
+        try:
+            import time
+            from core.avatar_directive_server import AvatarDirectiveServer
+            srv = AvatarDirectiveServer.get_instance()
+            mood_lower = str(mood or "relaxed").lower()
+            m_map = {
+                "happy": {"happy": 0.85, "surprised": 0.15, "relaxed": 0.35, "shy": 0.05},
+                "curious": {"surprised": 0.45, "relaxed": 0.30, "happy": 0.25, "shy": 0.10},
+                "surprised": {"surprised": 0.85, "happy": 0.35, "relaxed": 0.10, "shy": 0.05},
+                "caring": {"relaxed": 0.75, "happy": 0.45, "surprised": 0.05, "shy": 0.20},
+                "relaxed": {"relaxed": 0.85, "happy": 0.30, "surprised": 0.0, "shy": 0.0},
+                "shy": {"shy": 0.80, "relaxed": 0.40, "happy": 0.20, "surprised": 0.10},
+                "thinking": {"relaxed": 0.50, "surprised": 0.20, "happy": 0.15, "shy": 0.05},
+            }
+            morphs = m_map.get(mood_lower, {"relaxed": 0.50, "happy": 0.40, "surprised": 0.10, "shy": 0.0})
+            entry = {
+                "id": f"brain_synth_{int(time.time() * 1000)}",
+                "context": context,
+                "emotion": mood_lower,
+                "text_snippet": (text or "")[:40],
+                "morphs": morphs,
+                "secondary_bones": {
+                    "jawOpen": 0.15 if any(v in (text or "").lower() for v in ("a", "o", "e")) else 0.0,
+                    "pupilScale": 1.05 if mood_lower in ("curious", "surprised", "happy") else 0.98,
+                    "browAsymmetry": 0.08 if mood_lower in ("curious", "thinking") else 0.0
+                },
+                "body_posture": {
+                    "spinePitch": 0.04 if mood_lower == "curious" else (-0.03 if mood_lower == "relaxed" else 0.0),
+                    "headTiltZ": 0.05 if mood_lower in ("caring", "curious") else 0.0,
+                    "shoulderLift": 0.03 if mood_lower in ("surprised", "shy") else 0.0,
+                    "clip": "curious_lean" if mood_lower == "curious" else ("cat_pose" if mood_lower == "happy" else "idle")
+                }
+            }
+            srv.record_learned_behavior(entry)
+            return entry
+        except Exception:
+            return None
 
     def _execute_action(self, action_str: str) -> Dict[str, Any]:
         try:

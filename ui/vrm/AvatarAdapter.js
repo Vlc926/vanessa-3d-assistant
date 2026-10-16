@@ -133,6 +133,8 @@ export function NaturalBindPoseFix(target) {
   return true;
 }
 
+export const NaturalPostureInitializer = NaturalBindPoseFix;
+
 export class VRMARetargeter {
   static applyNormalizedQuaternionBridge(sourceQuat, canonicalBone, isMmd = false) {
     if (!sourceQuat) return new THREE.Quaternion();

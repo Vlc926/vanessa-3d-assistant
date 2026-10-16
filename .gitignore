@@ -20,6 +20,7 @@ models/tts/*.onnx
 models/tts/*.bin
 models/pmx_models/
 ui/vrm.zip
+*.zip
 
 config/settings.json
 config/cloud_config.json
