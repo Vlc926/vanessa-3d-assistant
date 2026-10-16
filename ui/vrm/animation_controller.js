@@ -141,6 +141,9 @@ export class AnimationController {
                 if (clip && clip.tracks) {
                     clip.tracks = clip.tracks.filter(track => {
                         const lower = track.name.toLowerCase();
+                        if (lower.includes('expression') || lower.includes('morphtargetinfluences') || track.name.endsWith('.weight')) {
+                            return false;
+                        }
                         if (track.name.endsWith('.position')) {
                             if (lower.includes('hips') || lower.includes('root')) {
                                 if (track.values && track.values.length >= 3) {

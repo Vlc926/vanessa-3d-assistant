@@ -444,7 +444,7 @@ export class AnimeFacialDriver {
                 finalVal = Math.min(1.0, finalVal + this.microSmileOffset);
             }
             this.currentMorphs.set(morphName, finalVal);
-            this._applyRawMorph(morphName, finalVal);
+            this._applyRawMorph(morphName, finalVal, safeDt);
         });
 
         this.targetMorphs.forEach((targetWeight, morphName) => {
@@ -455,39 +455,49 @@ export class AnimeFacialDriver {
                     finalTarget = Math.min(1.0, finalTarget + this.microSmileOffset);
                 }
                 if (Math.abs(current - finalTarget) > 0.002) {
-                    current += (finalTarget - current) * Math.min(1.0, safeDt * this.blendSpeed);
+                    current = THREE.MathUtils.lerp(current, finalTarget, Math.min(1.0, safeDt * this.blendSpeed));
                     this.currentMorphs.set(morphName, current);
-                    this._applyRawMorph(morphName, current);
+                    this._applyRawMorph(morphName, current, safeDt);
                 }
             }
         });
     }
 
-    _applyRawMorph(name, weight) {
+    _applyRawMorph(name, weight, safeDt = 0.016) {
         if (!this.vrm) return;
 
         const clampedWeight = Math.max(0.0, Math.min(1.0, Number(weight) || 0.0));
         const lower = name.toLowerCase();
+        const factor = Math.min(1.0, (Number(safeDt) || 0.016) * 18.0);
 
         let applied = false;
         if (this.vrm.expressionManager) {
             const expMgr = this.vrm.expressionManager;
-            if (this.supportedExpressions.has(lower)) {
+            const applyExp = (expName) => {
+                let currentVal = 0.0;
                 try {
-                    expMgr.setValue(name, clampedWeight);
-                    applied = true;
+                    currentVal = expMgr.getValue(expName) || 0.0;
                 } catch (e) {}
+                const nextVal = THREE.MathUtils.lerp(currentVal, clampedWeight, factor);
+                try {
+                    expMgr.setValue(expName, nextVal);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            };
+            if (this.supportedExpressions.has(lower)) {
+                if (applyExp(name)) applied = true;
             }
             if (!applied && this.aliasMap[lower]) {
                 const aliases = this.aliasMap[lower];
                 for (let i = 0; i < aliases.length; i++) {
                     const alias = aliases[i];
                     if (this.supportedExpressions.has(alias.toLowerCase())) {
-                        try {
-                            expMgr.setValue(alias, clampedWeight);
+                        if (applyExp(alias)) {
                             applied = true;
                             break;
-                        } catch (e) {}
+                        }
                     }
                 }
             }
@@ -505,7 +515,8 @@ export class AnimeFacialDriver {
             for (let i = 0; i < entries.length; i++) {
                 const item = entries[i];
                 if (item.mesh && item.mesh.morphTargetInfluences) {
-                    item.mesh.morphTargetInfluences[item.index] = clampedWeight;
+                    const cur = item.mesh.morphTargetInfluences[item.index] || 0.0;
+                    item.mesh.morphTargetInfluences[item.index] = THREE.MathUtils.lerp(cur, clampedWeight, factor);
                     applied = true;
                 }
             }
@@ -518,7 +529,8 @@ export class AnimeFacialDriver {
                     for (let j = 0; j < entries.length; j++) {
                         const item = entries[j];
                         if (item.mesh && item.mesh.morphTargetInfluences) {
-                            item.mesh.morphTargetInfluences[item.index] = clampedWeight;
+                            const cur = item.mesh.morphTargetInfluences[item.index] || 0.0;
+                            item.mesh.morphTargetInfluences[item.index] = THREE.MathUtils.lerp(cur, clampedWeight, factor);
                             applied = true;
                         }
                     }

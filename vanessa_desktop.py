@@ -1129,6 +1129,8 @@ class VanessaDesktopOverlay(QWidget):
                 self.skeletal_controller.handle_haptic_interaction("drag_start", float(self.x()), float(self.y()))
             if hasattr(self, "physics_engine"):
                 self.physics_engine.start_drag(float(self.x()), float(self.y()))
+            if hasattr(self, "vrm_widget") and self.vrm_widget and hasattr(self.vrm_widget, "set_physical_state"):
+                self.vrm_widget.set_physical_state("DRAGGED_IN_AIR")
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             self.next_animation_frame()
             event.accept()
@@ -1164,6 +1166,11 @@ class VanessaDesktopOverlay(QWidget):
             self.skeletal_controller.handle_haptic_interaction("drag_release", float(self.x()), float(self.y()))
         if hasattr(self, "physics_engine"):
             calc_vx, calc_vy = self.physics_engine.release_drag(float(self.x()), float(self.y()))
+        if hasattr(self, "vrm_widget") and self.vrm_widget and hasattr(self.vrm_widget, "set_physical_state"):
+            if abs(calc_vy) > 80.0 or abs(calc_vx) > 80.0:
+                self.vrm_widget.set_physical_state("FREE_FALL", vy=calc_vy)
+            else:
+                self.vrm_widget.set_physical_state("GROUNDED")
         if math.hypot(calc_vx, calc_vy) < 75.0:
             self.anim_state = "idle"
             self.sync_hyprland_position(self.x(), self.y())

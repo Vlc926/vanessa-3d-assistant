@@ -112,24 +112,16 @@ motionMatching.onExpressionTrigger = (expr, weight) => {
 };
 
 export function setMorphTarget(name, weight = 1.0) {
-    if (!currentVrm || !currentVrm.scene) return;
     const w = Math.max(0, Math.min(1, Number(weight) || 0));
-    currentVrm.scene.traverse((node) => {
-        if (node.isMesh && node.morphTargetDictionary && node.morphTargetInfluences) {
-            if (name in node.morphTargetDictionary) {
-                const idx = node.morphTargetDictionary[name];
-                node.morphTargetInfluences[idx] = w;
-            } else {
-                for (const key of Object.keys(node.morphTargetDictionary)) {
-                    if (key.toLowerCase() === name.toLowerCase()) {
-                        const idx = node.morphTargetDictionary[key];
-                        node.morphTargetInfluences[idx] = w;
-                        break;
-                    }
-                }
-            }
+    if (animeFacialDriver) {
+        if (animeFacialDriver.blender && typeof animeFacialDriver.blender.setCustomBlendshape === 'function') {
+            animeFacialDriver.blender.setCustomBlendshape(name, w);
         }
-    });
+        animeFacialDriver.setMorph(name, w);
+    }
+    if (currentVrm && currentVrm.isMmd && dedicatedPmxController) {
+        dedicatedPmxController.setExpression(name, w);
+    }
 }
 
 export function setExpression(name, weight = 1.0) {
@@ -659,7 +651,7 @@ function animate() {
 
     if (!currentVrm || !currentVrm.isMmd) {
         if (Math.abs(currentScaleFactor - targetScaleFactor) > 0.001) {
-            currentScaleFactor += (targetScaleFactor - currentScaleFactor) * Math.min(1.0, dt * 10.0);
+            currentScaleFactor = THREE.MathUtils.lerp(currentScaleFactor, targetScaleFactor, Math.min(1.0, dt * 10.0));
             const finalScale = baseModelScale * currentScaleFactor;
             if (currentVrm && currentVrm.scene) {
                 currentVrm.scene.scale.set(finalScale, finalScale, finalScale);
@@ -672,29 +664,32 @@ function animate() {
 
     if (currentVrm) {
         sensoryBroker.update(dt);
+        animController.update(dt);
+        animationEngine.update(dt);
         if (!currentVrm.isMmd) {
             chibiModifier.update(dt);
-            animeFxRenderer.update(dt);
             motionMatching.update(dt, currentVrm);
-            animController.update(dt);
             gazeController.update(dt, currentVrm);
+            footIkSolver.update(dt);
+            animeFacialDriver.update(dt);
             springDynamicsTuner.update(dt);
             currentVrm.update(dt);
             frameModulationController.update(dt);
             squashStretchModifier.update(dt);
-            animeFacialDriver.update(dt);
-            footIkSolver.update(dt);
             consciousSkeletalDriver.update(dt);
             gachaCinematicController.update(dt);
             gachaAnimationGraph.setLocomotion(motionMatching.isLocomoting, motionMatching.currentSpeed, motionMatching.targetYaw, motionMatching.facingYaw);
             gachaAnimationGraph.update(dt);
+            animeFxRenderer.update(dt);
         } else {
-            animController.update(dt);
             dedicatedPmxController.updateProceduralDynamics(dt, currentVrm);
+            footIkSolver.update(dt);
             animeFacialDriver.update(dt);
             squashStretchModifier.update(dt);
-            footIkSolver.update(dt);
             animeFxRenderer.update(dt);
+            if (currentAvatarAdapter) {
+                currentAvatarAdapter.update(dt);
+            }
         }
         if (currentVrm.scene) {
             const baseRot = Math.PI;
@@ -702,10 +697,6 @@ function animate() {
             const yaw = currentVrm.isMmd ? 0.0 : motionMatching.facingYaw;
             currentVrm.scene.rotation.y = baseRot + rotOffset + yaw;
         }
-    }
-    animationEngine.update(dt);
-    if (currentAvatarAdapter) {
-        currentAvatarAdapter.update(dt);
     }
     renderer.render(scene, camera);
 }
@@ -894,8 +885,14 @@ window.vrmController = {
     setSpringProfile: (profile) => {
         springDynamicsTuner.setProfile(profile);
     },
-    applyExternalPhysicsImpulse: (dx, dy, dt) => {
+    applyExternalPhysicsImpulse: (dx, dy, dt = 0.016) => {
         springDynamicsTuner.applyExternalImpulse(dx, dy, dt);
+        if (animationEngine && typeof animationEngine.applyExternalPhysicsImpulse === 'function') {
+            animationEngine.applyExternalPhysicsImpulse(dx, dy, dt);
+        }
+        if (dedicatedPmxController && typeof dedicatedPmxController.applyExternalImpulse === 'function') {
+            dedicatedPmxController.applyExternalImpulse(dx, dy, dt);
+        }
     },
     syncLocomotionStep: (vx = 0.0, vy = 0.0, stridePhase = 0.0) => {
         footIkSolver.syncLocomotionStep(vx, vy, stridePhase);
@@ -911,10 +908,17 @@ window.vrmController = {
         } else if (state === 'FREE_FALL') {
             footIkSolver.setPerched(false);
             motionMatching.setPerched(false);
-            springDynamicsTuner.applyExternalImpulse(0.0, -Math.abs(options.vy || 250.0) * 0.05, 0.016);
+            const vy = Number(options.vy || 250.0);
+            springDynamicsTuner.applyExternalImpulse(0.0, -Math.abs(vy) * 0.05, 0.016);
+            if (animationEngine && typeof animationEngine.applyExternalPhysicsImpulse === 'function') {
+                animationEngine.applyExternalPhysicsImpulse(0.0, -Math.abs(vy) * 0.04, 0.016);
+            }
         } else if (state === 'DRAGGED_IN_AIR') {
             footIkSolver.setPerched(false);
             motionMatching.setPerched(false);
+            if (animationEngine && typeof animationEngine.applyExternalPhysicsImpulse === 'function') {
+                animationEngine.applyExternalPhysicsImpulse(0.0, -10.0, 0.016);
+            }
         } else {
             footIkSolver.setPerched(false);
             motionMatching.setPerched(false);

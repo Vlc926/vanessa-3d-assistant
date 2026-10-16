@@ -185,7 +185,11 @@ export class AnimationEngine {
     this.fullBodyArticulation = null;
     this.learnedBehaviors = [];
     this.activeLearnedBehavior = null;
-    this.onSaveLearnedBehavior = null;
+    this.inertiaLeanZ = 0.0;
+    this.inertiaLeanX = 0.0;
+    this.targetInertiaLeanZ = 0.0;
+    this.targetInertiaLeanX = 0.0;
+    this.standaloneUpdate = false;
     this._loadLearnedBehaviors();
   }
 
@@ -313,6 +317,20 @@ export class AnimationEngine {
     }
   }
 
+  applyExternalPhysicsImpulse(dx, dy, dt = 0.016) {
+    const safeDt = Math.max(0.001, Math.min(0.05, Number(dt) || 0.016));
+    const invDt = 1.0 / safeDt;
+    const vx = Number(dx || 0.0) * invDt;
+    const vy = Number(dy || 0.0) * invDt;
+
+    this.torsoSpring.impulse(-dx * 0.08);
+    this.hipsSpring.impulse(dx * 0.06);
+    this.limbsSpring.impulse(Math.hypot(dx, dy) * 0.04);
+
+    this.targetInertiaLeanZ = THREE.MathUtils.clamp(-vx * 0.00065, -0.32, 0.32);
+    this.targetInertiaLeanX = THREE.MathUtils.clamp(vy * 0.00055, -0.22, 0.22);
+  }
+
   setPhysicalState(state, options = {}) {
     const prev = this.physicalState;
     this.physicalState = String(state || 'GROUNDED').toUpperCase();
@@ -414,7 +432,9 @@ export class AnimationEngine {
     this._updateZZZSpringSquashStretch(clampedDt);
     this._updateLayer3LookAtIK(clampedDt);
 
-    this.avatar.update(clampedDt);
+    if (this.avatar && typeof this.avatar.update === 'function' && this.standaloneUpdate) {
+      this.avatar.update(clampedDt);
+    }
   }
 
   _updateZZZSpringSquashStretch(dt) {
@@ -590,14 +610,19 @@ export class AnimationEngine {
     const hipSway = Math.sin(this.idleTime * 0.85) * 0.024;
     const contrappostoRoll = -hipSway * 0.65;
 
+    this.inertiaLeanZ = THREE.MathUtils.damp(this.inertiaLeanZ, this.targetInertiaLeanZ, 8.0, dt);
+    this.inertiaLeanX = THREE.MathUtils.damp(this.inertiaLeanX, this.targetInertiaLeanX, 8.0, dt);
+    this.targetInertiaLeanZ = THREE.MathUtils.damp(this.targetInertiaLeanZ, 0.0, 5.0, dt);
+    this.targetInertiaLeanX = THREE.MathUtils.damp(this.targetInertiaLeanX, 0.0, 5.0, dt);
+
     if (spine) {
-      spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, breath * 0.022 + deepBreath + extraSpinePitch, 6.0, dt);
-      spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, noiseSpine + contrappostoRoll * 0.5, 4.0, dt);
+      spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, breath * 0.022 + deepBreath + extraSpinePitch + this.inertiaLeanX, 6.0, dt);
+      spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, noiseSpine + contrappostoRoll * 0.5 + this.inertiaLeanZ, 4.0, dt);
       spine.rotation.y = THREE.MathUtils.damp(spine.rotation.y, Math.sin(this.idleTime * 0.5) * 0.015, 3.5, dt);
     }
     if (chest) {
-      chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, breath * 0.038 + deepBreath * 1.5 + extraChestPitch, 6.0, dt);
-      chest.rotation.z = THREE.MathUtils.damp(chest.rotation.z, contrappostoRoll, 4.0, dt);
+      chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, breath * 0.038 + deepBreath * 1.5 + extraChestPitch + this.inertiaLeanX * 0.4, 6.0, dt);
+      chest.rotation.z = THREE.MathUtils.damp(chest.rotation.z, contrappostoRoll + this.inertiaLeanZ * 0.5, 4.0, dt);
     }
     if (lShoulder) {
       lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, -0.04 + breath * 0.018 - contrappostoRoll * 0.4, 5.0, dt);
@@ -608,7 +633,7 @@ export class AnimationEngine {
       rShoulder.rotation.y = THREE.MathUtils.damp(rShoulder.rotation.y, -noiseArmR * 0.5, 4.0, dt);
     }
     if (hips) {
-      hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, hipSway, 4.0, dt);
+      hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, hipSway + this.inertiaLeanZ * 0.7, 4.0, dt);
       hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, hipSway * 0.6, 4.0, dt);
     }
 

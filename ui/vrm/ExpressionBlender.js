@@ -163,6 +163,22 @@ export class ExpressionBlender {
         relaxed: 0.45,
         Fcl_MTH_Fun: 0.80,
         Fcl_EYE_Close_L: 0.40
+      },
+      star_eyes: {
+        surprised: 0.75,
+        happy: 0.65,
+        eyeWideLeft: 0.85,
+        eyeWideRight: 0.85,
+        Fcl_ALL_Joy: 0.75,
+        Fcl_EYE_Surprised: 0.90,
+        Fcl_BRW_Joy: 0.60
+      },
+      flustered: {
+        relaxed: 0.45,
+        shy: 0.90,
+        cheekSquintLeft: 0.75,
+        cheekSquintRight: 0.75,
+        Fcl_BRW_Sorrow: 0.45
       }
     };
   }
@@ -177,7 +193,7 @@ export class ExpressionBlender {
     const activeKeys = new Set(Object.keys(preset));
 
     for (const [key, channel] of this.channels.entries()) {
-      if (!key.startsWith('viseme_') && !activeKeys.has(key)) {
+      if (!key.startsWith('viseme_') && !key.startsWith('custom_') && !activeKeys.has(key)) {
         this.setMorph(key, 0.0, false, this.transitionDuration * 0.9);
       }
     }
@@ -187,6 +203,10 @@ export class ExpressionBlender {
     }
 
     this._updateContextualSecondaryBones(norm, this.emotionIntensity);
+  }
+
+  setCustomBlendshape(name, weight, duration = 0.30) {
+    this.setMorph(`custom_${name}`, weight, false, duration);
   }
 
   setMorph(name, targetVal, snap = false, duration = 0.32) {
@@ -416,7 +436,12 @@ export class ExpressionBlender {
     const result = new Map();
     for (const [key, ch] of this.channels.entries()) {
       if (key.startsWith('viseme_')) continue;
-      result.set(key, ch.current);
+      if (key.startsWith('custom_')) {
+        const cleanKey = key.slice(7);
+        result.set(cleanKey, Math.max(result.get(cleanKey) || 0.0, ch.current));
+      } else {
+        result.set(key, ch.current);
+      }
     }
 
     for (const [vKey, val] of Object.entries(this.visemes)) {
