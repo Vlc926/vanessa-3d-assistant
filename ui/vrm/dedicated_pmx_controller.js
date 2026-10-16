@@ -420,7 +420,6 @@ export class DedicatedPMXController {
                             mat.map.minFilter = THREE.LinearMipmapLinearFilter;
                             mat.map.magFilter = THREE.LinearFilter;
                         }
-                    }
                         if (mat.color) {
                             mat.color.setRGB(1.0, 1.0, 1.0);
                         }
