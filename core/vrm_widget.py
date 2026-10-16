@@ -35,6 +35,39 @@ class ThreadedHTTPServer:
                 self.send_header("Expires", "0")
                 super().end_headers()
 
+            def translate_path(self, path):
+                norm = path.split("?", 1)[0].split("#", 1)[0]
+                norm = norm.replace("\\", "/")
+                resolved = super().translate_path(norm)
+                if os.path.exists(resolved):
+                    return resolved
+                parts = os.path.normpath(norm).strip("/").split("/")
+                curr = directory_to_serve
+                for part in parts:
+                    if not part or part == ".":
+                        continue
+                    if part == "..":
+                        curr = os.path.dirname(curr)
+                        continue
+                    direct = os.path.join(curr, part)
+                    if os.path.exists(direct):
+                        curr = direct
+                        continue
+                    matched = None
+                    try:
+                        part_lower = part.lower()
+                        for entry in os.listdir(curr):
+                            if entry.lower() == part_lower:
+                                matched = entry
+                                break
+                    except Exception:
+                        pass
+                    if matched:
+                        curr = os.path.join(curr, matched)
+                    else:
+                        return resolved
+                return curr
+
             def copyfile(self, source, outputfile):
                 try:
                     super().copyfile(source, outputfile)

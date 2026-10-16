@@ -154,7 +154,13 @@ def build_context_menu(overlay) -> QMenu:
         ("tsunomaki_watame", "Tsunomaki Watame", "Ovejita Cantante Afelpada"),
         ("ouro_kronii", "Ouro Kronii", "Guardiana del Tiempo"),
         ("pavolia_reine", "Pavolia Reine", "Princesa Pavo Real"),
-        ("hatsune_miku_v4c", "Hatsune Miku V4C", "野餐式 Diva Virtual")
+        ("hatsune_miku_v4c", "Hatsune Miku V4C", "野餐式 Diva Virtual"),
+        ("burnice_white", "Burnice White (ZZZ)", "Sons of Calydon"),
+        ("ellen_joe", "Ellen Joe (ZZZ Maid)", "Victoria Housekeeping"),
+        ("hoshimi_miyabi", "Hoshimi Miyabi (ZZZ)", "Section 6 Chief"),
+        ("jane_doe", "Jane Doe (ZZZ)", "Crim. Investigation"),
+        ("anby_demara", "Anby Demara (ZZZ)", "Cunning Hares"),
+        ("nicole_demara", "Nicole Demara (ZZZ)", "Cunning Hares Boss")
     ]
 
     alias_to_canonical = {
@@ -166,7 +172,13 @@ def build_context_menu(overlay) -> QMenu:
         "watame": "tsunomaki_watame",
         "kronii": "ouro_kronii",
         "reine": "pavolia_reine",
-        "miku": "hatsune_miku_v4c"
+        "miku": "hatsune_miku_v4c",
+        "burnice": "burnice_white",
+        "ellen": "ellen_joe",
+        "miyabi": "hoshimi_miyabi",
+        "jane": "jane_doe",
+        "anby": "anby_demara",
+        "nicole": "nicole_demara"
     }
 
     cur_model = getattr(overlay, "current_vrm_model", "hoshimachi_suisei")

@@ -320,15 +320,14 @@ export class AnimationEngine {
   applyExternalPhysicsImpulse(dx, dy, dt = 0.016) {
     const safeDt = Math.max(0.001, Math.min(0.05, Number(dt) || 0.016));
     const invDt = 1.0 / safeDt;
-    const vx = Number(dx || 0.0) * invDt;
     const vy = Number(dy || 0.0) * invDt;
 
-    this.torsoSpring.impulse(-dx * 0.08);
-    this.hipsSpring.impulse(dx * 0.06);
-    this.limbsSpring.impulse(Math.hypot(dx, dy) * 0.04);
+    this.torsoSpring.impulse(0.0);
+    this.hipsSpring.impulse(0.0);
+    this.limbsSpring.impulse(Math.hypot(dx, dy) * 0.02);
 
-    this.targetInertiaLeanZ = THREE.MathUtils.clamp(-vx * 0.00065, -0.32, 0.32);
-    this.targetInertiaLeanX = THREE.MathUtils.clamp(vy * 0.00055, -0.22, 0.22);
+    this.targetInertiaLeanZ = 0.0;
+    this.targetInertiaLeanX = THREE.MathUtils.clamp(vy * 0.00008, -0.04, 0.04);
   }
 
   setPhysicalState(state, options = {}) {
@@ -473,6 +472,9 @@ export class AnimationEngine {
   _updateLocomotionAndPhysicalStates(dt) {
     const hips = this.avatar.getBone('hips');
     const spine = this.avatar.getBone('spine');
+    const chest = this.avatar.getBone('chest');
+    const lShoulder = this.avatar.getBone('leftShoulder');
+    const rShoulder = this.avatar.getBone('rightShoulder');
     const lUpperLeg = this.avatar.getBone('leftUpperLeg');
     const rUpperLeg = this.avatar.getBone('rightUpperLeg');
     const lLowerLeg = this.avatar.getBone('leftLowerLeg');
@@ -500,21 +502,35 @@ export class AnimationEngine {
 
     if (this.physicalState === 'DRAGGED_IN_AIR') {
       this.dragAirTime += dt;
-      const kick = Math.sin(this.dragAirTime * 14.0);
-      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.35 + kick * 0.45, 12.0, dt);
-      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.35 - kick * 0.45, 12.0, dt);
-      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.55 + Math.max(0, kick) * 0.40, 12.0, dt);
-      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.55 + Math.max(0, -kick) * 0.40, 12.0, dt);
+      const kick = Math.sin(this.dragAirTime * 5.5);
+      if (spine) {
+        spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, 0.0, 14.0, dt);
+        spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, 0.04, 10.0, dt);
+      }
+      if (chest) {
+        chest.rotation.z = THREE.MathUtils.damp(chest.rotation.z, 0.0, 14.0, dt);
+        chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, 0.02, 10.0, dt);
+      }
+      if (hips) {
+        hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, 0.0, 14.0, dt);
+        hips.rotation.x = THREE.MathUtils.damp(hips.rotation.x, 0.02, 10.0, dt);
+      }
+      if (lShoulder) lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, 0.12, 10.0, dt);
+      if (rShoulder) rShoulder.rotation.z = THREE.MathUtils.damp(rShoulder.rotation.z, -0.12, 10.0, dt);
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.32 + kick * 0.22, 10.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.32 - kick * 0.22, 10.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.45 + Math.max(0, kick) * 0.25, 10.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.45 + Math.max(0, -kick) * 0.25, 10.0, dt);
       if (lArm) {
-        lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, 0.35, 10.0, dt);
-        lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.45, 10.0, dt);
+        lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, 0.25, 10.0, dt);
+        lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.42, 10.0, dt);
       }
       if (rArm) {
-        rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, 0.35, 10.0, dt);
-        rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.45, 10.0, dt);
+        rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, 0.25, 10.0, dt);
+        rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.42, 10.0, dt);
       }
-      if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.40, 10.0, dt);
-      if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.40, 10.0, dt);
+      if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.35, 10.0, dt);
+      if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.35, 10.0, dt);
       this.avatar.setExpression('surprised', 0.85);
       this.avatar.setExpression('shy', 0.75);
       return;
@@ -617,12 +633,12 @@ export class AnimationEngine {
 
     if (spine) {
       spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, breath * 0.022 + deepBreath + extraSpinePitch + this.inertiaLeanX, 6.0, dt);
-      spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, noiseSpine + contrappostoRoll * 0.5 + this.inertiaLeanZ, 4.0, dt);
+      spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, noiseSpine + contrappostoRoll * 0.5, 4.0, dt);
       spine.rotation.y = THREE.MathUtils.damp(spine.rotation.y, Math.sin(this.idleTime * 0.5) * 0.015, 3.5, dt);
     }
     if (chest) {
       chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, breath * 0.038 + deepBreath * 1.5 + extraChestPitch + this.inertiaLeanX * 0.4, 6.0, dt);
-      chest.rotation.z = THREE.MathUtils.damp(chest.rotation.z, contrappostoRoll + this.inertiaLeanZ * 0.5, 4.0, dt);
+      chest.rotation.z = THREE.MathUtils.damp(chest.rotation.z, contrappostoRoll, 4.0, dt);
     }
     if (lShoulder) {
       lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, -0.04 + breath * 0.018 - contrappostoRoll * 0.4, 5.0, dt);
@@ -633,7 +649,7 @@ export class AnimationEngine {
       rShoulder.rotation.y = THREE.MathUtils.damp(rShoulder.rotation.y, -noiseArmR * 0.5, 4.0, dt);
     }
     if (hips) {
-      hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, hipSway + this.inertiaLeanZ * 0.7, 4.0, dt);
+      hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, hipSway, 4.0, dt);
       hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, hipSway * 0.6, 4.0, dt);
     }
 

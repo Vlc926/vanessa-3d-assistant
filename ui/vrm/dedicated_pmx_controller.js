@@ -220,10 +220,9 @@ export class DedicatedPMXController {
     applyExternalImpulse(dx, dy, dt = 0.016) {
         const safeDt = Math.max(0.001, Math.min(0.05, Number(dt) || 0.016));
         const invDt = 1.0 / safeDt;
-        const vx = Number(dx || 0.0) * invDt;
         const vy = Number(dy || 0.0) * invDt;
-        this.targetInertiaLeanZ = THREE.MathUtils.clamp(-vx * 0.00065, -0.32, 0.32);
-        this.targetInertiaLeanX = THREE.MathUtils.clamp(vy * 0.00055, -0.22, 0.22);
+        this.targetInertiaLeanZ = 0.0;
+        this.targetInertiaLeanX = THREE.MathUtils.clamp(vy * 0.00008, -0.04, 0.04);
     }
 
     startWalking(speed = 1.0) {
@@ -422,13 +421,19 @@ export class DedicatedPMXController {
                             mat.map.magFilter = THREE.LinearFilter;
                         }
                     }
-                    if (mat.color) {
-                        mat.color.setRGB(1.0, 1.0, 1.0);
+                        if (mat.color) {
+                            mat.color.setRGB(1.0, 1.0, 1.0);
+                        }
+                    } else {
+                        if (!mat.color) {
+                            mat.color = new THREE.Color(0xf5e6dc);
+                        }
                     }
                     if (mat.emissive) {
                         mat.emissive.setRGB(0.015, 0.012, 0.010);
                     }
-                    mat.roughness = 0.28;
+                    mat.shininess = Math.min(5.0, mat.shininess || 5.0);
+                    mat.roughness = 0.35;
                     mat.metalness = 0.02;
                     mat.alphaTest = 0.05;
                     mat.depthWrite = true;
@@ -732,7 +737,7 @@ export class DedicatedPMXController {
             const targetHipsY = this.initialHipsY - (walkBounce * 0.032 * wW);
             hips.position.y = THREE.MathUtils.lerp(hips.position.y, targetHipsY, 0.25);
             const targetHipsZ = walkSway * 0.012 * wW;
-            hips.rotation.z = THREE.MathUtils.lerp(hips.rotation.z, targetHipsZ + this.inertiaLeanZ * 0.7, 0.20);
+            hips.rotation.z = THREE.MathUtils.lerp(hips.rotation.z, targetHipsZ, 0.20);
             hips.rotation.y = THREE.MathUtils.lerp(hips.rotation.y, walkSway * 0.035 * wW, 0.20);
         }
 
@@ -767,12 +772,12 @@ export class DedicatedPMXController {
             const walkSpineTurn = -walkSway * 0.035 * wW;
             spine.rotation.x = THREE.MathUtils.lerp(spine.rotation.x, breath * 0.024 + spineLean + this.inertiaLeanX, 0.15);
             spine.rotation.y = THREE.MathUtils.lerp(spine.rotation.y, sway * sAmp + walkSpineTurn, 0.10);
-            spine.rotation.z = THREE.MathUtils.lerp(spine.rotation.z, -swaySlow * (sAmp * 0.6) + this.inertiaLeanZ, 0.10);
+            spine.rotation.z = THREE.MathUtils.lerp(spine.rotation.z, -swaySlow * (sAmp * 0.6), 0.10);
         }
         if (chest) {
             chest.rotation.x = THREE.MathUtils.lerp(chest.rotation.x, breath * 0.035 + chestLean + this.inertiaLeanX * 0.5, 0.15);
             chest.rotation.y = THREE.MathUtils.lerp(chest.rotation.y, sway * (sAmp * 0.7), 0.10);
-            chest.rotation.z = THREE.MathUtils.lerp(chest.rotation.z, this.inertiaLeanZ * 0.5, 0.10);
+            chest.rotation.z = THREE.MathUtils.lerp(chest.rotation.z, 0.0, 0.10);
         }
         if (neck) {
             neck.rotation.x = THREE.MathUtils.lerp(neck.rotation.x, -breath * 0.016, 0.10);

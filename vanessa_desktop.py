@@ -129,7 +129,13 @@ class VanessaDesktopOverlay(QWidget):
             "watame": "tsunomaki_watame",
             "kronii": "ouro_kronii",
             "reine": "pavolia_reine",
-            "miku": "hatsune_miku_v4c"
+            "miku": "hatsune_miku_v4c",
+            "burnice": "burnice_white",
+            "ellen": "ellen_joe",
+            "miyabi": "hoshimi_miyabi",
+            "jane": "jane_doe",
+            "anby": "anby_demara",
+            "nicole": "nicole_demara"
         }
         for alias, target in alias_map.items():
             if target in self.vrm_models_map:
@@ -842,7 +848,9 @@ class VanessaDesktopOverlay(QWidget):
                 self.vrm_widget.start_motion("thinking")
                 self.vrm_widget.set_expression("thinking", 0.9)
         elif act in ("sit", "sentarse", "descansar"):
-            if getattr(self, "using_vrm", False) and hasattr(self, "vrm_widget"):
+            if hasattr(self, "screen_interact") and self.screen_interact:
+                self.screen_interact.perch_on_window_border(style="sit")
+            elif getattr(self, "using_vrm", False) and hasattr(self, "vrm_widget"):
                 self.vrm_widget.start_motion("sit")
                 self.vrm_widget.set_expression("relaxed", 0.8)
         elif act in ("rest", "sleep", "dormir"):

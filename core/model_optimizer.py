@@ -384,4 +384,28 @@ class ModelOptimizer:
                 item["web_path"] = f"/ui/static/vrm_models/{model_id}/{os.path.basename(pmx_path)}"
                 catalog[model_id] = item
                 self.optimize_model(model_id, model_dir, meta)
+
+        pmx_models_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "ui", "static", "pmx_models")
+        )
+        fallback_models_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "models", "pmx_models")
+        )
+        for model_id, meta in OFFICIAL_ZZZ_MODELS.items():
+            model_dir = os.path.join(pmx_models_dir, model_id)
+            if not os.path.exists(model_dir):
+                model_dir = os.path.join(fallback_models_dir, model_id)
+            if not os.path.exists(model_dir):
+                continue
+            pmx_path = os.path.join(model_dir, meta.get("primary_file", ""))
+            if not os.path.exists(pmx_path):
+                candidates = [f for f in os.listdir(model_dir) if f.endswith(".pmx") and not any(f.startswith(p) for p in ("武器", "刀", "幽灵"))]
+                if candidates:
+                    pmx_path = os.path.join(model_dir, candidates[0])
+            if os.path.exists(pmx_path):
+                item = dict(meta)
+                item["pmx_path"] = pmx_path
+                rel_web = os.path.relpath(pmx_path, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+                item["web_path"] = "/" + rel_web.replace("\\", "/")
+                catalog[model_id] = item
         return catalog

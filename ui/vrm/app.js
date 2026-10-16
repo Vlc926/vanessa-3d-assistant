@@ -62,6 +62,9 @@ loader.register((parser) => new VRMLoaderPlugin(parser));
 loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
 const fbxLoader = new FBXLoader();
 const mmdLoadingManager = new THREE.LoadingManager();
+mmdLoadingManager.setURLModifier((url) => {
+    return url.replace(/\\/g, '/');
+});
 mmdLoadingManager.addHandler(/\.tga$/i, new TGALoader());
 const mmdLoader = new MMDLoader(mmdLoadingManager);
 
@@ -247,12 +250,11 @@ export function setExpression(name, weight = 1.0) {
     }
 }
 
+let currentMouthRatio = 0.0;
+let targetMouthRatio = 0.0;
+
 export function setMouth(ratio) {
-    if (!currentVrm || !currentVrm.expressionManager) return;
-    const clamped = Math.max(0.0, Math.min(1.0, Number(ratio) || 0));
-    try {
-        currentVrm.expressionManager.setValue(VRMExpressionPresetName.Aa, clamped);
-    } catch (e) {}
+    targetMouthRatio = Math.max(0.0, Math.min(1.0, Number(ratio) || 0));
 }
 
 export function updateVisemeLipSync(ratio) {
@@ -260,7 +262,16 @@ export function updateVisemeLipSync(ratio) {
 }
 
 export function resetLipSync() {
-    setMouth(0.0);
+    targetMouthRatio = 0.0;
+    currentMouthRatio = 0.0;
+    if (currentVrm && currentVrm.expressionManager) {
+        try {
+            currentVrm.expressionManager.setValue(VRMExpressionPresetName.Aa, 0.0);
+        } catch (e) {}
+    }
+    if (currentAvatarAdapter) {
+        currentAvatarAdapter.setExpression('aa', 0.0);
+    }
 }
 
 export function playMotion(name) {
@@ -691,11 +702,28 @@ function animate() {
                 currentAvatarAdapter.update(dt);
             }
         }
+        if (Math.abs(currentMouthRatio - targetMouthRatio) > 0.0005) {
+            currentMouthRatio = THREE.MathUtils.damp(currentMouthRatio, targetMouthRatio, 18.0, dt);
+            if (currentVrm.expressionManager) {
+                try {
+                    currentVrm.expressionManager.setValue(VRMExpressionPresetName.Aa, currentMouthRatio);
+                } catch (e) {}
+            }
+            if (currentAvatarAdapter) {
+                currentAvatarAdapter.setExpression('aa', currentMouthRatio);
+            }
+        }
         if (currentVrm.scene) {
             const baseRot = Math.PI;
             const rotOffset = (currentVrm && currentVrm.isMmd) ? -Math.PI : 0.0;
             const yaw = currentVrm.isMmd ? 0.0 : motionMatching.facingYaw;
             currentVrm.scene.rotation.y = baseRot + rotOffset + yaw;
+            currentVrm.scene.rotation.z = 0.0;
+            currentVrm.scene.rotation.x = 0.0;
+        }
+        if (currentExternalMesh) {
+            currentExternalMesh.rotation.z = 0.0;
+            currentExternalMesh.rotation.x = 0.0;
         }
     }
     renderer.render(scene, camera);
@@ -886,7 +914,7 @@ window.vrmController = {
         springDynamicsTuner.setProfile(profile);
     },
     applyExternalPhysicsImpulse: (dx, dy, dt = 0.016) => {
-        springDynamicsTuner.applyExternalImpulse(dx, dy, dt);
+        springDynamicsTuner.applyExternalImpulse(-dx, -dy, dt);
         if (animationEngine && typeof animationEngine.applyExternalPhysicsImpulse === 'function') {
             animationEngine.applyExternalPhysicsImpulse(dx, dy, dt);
         }
@@ -1042,7 +1070,7 @@ function initHudControls() {
     if (toggleBtn && hudContainer) {
         toggleBtn.addEventListener('click', () => {
             hudContainer.classList.toggle('collapsed');
-            toggleBtn.textContent = hudContainer.classList.contains('collapsed') ? '+' : '−';
+            toggleBtn.textContent = hudContainer.classList.contains('collapsed') ? '⚙️' : '✕';
         });
     }
 

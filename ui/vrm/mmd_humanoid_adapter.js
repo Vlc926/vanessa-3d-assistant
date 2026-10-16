@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { NaturalBindPoseFix } from './AvatarAdapter.js';
+import { NaturalBindPoseFix, MMD_BONE_MAP } from './AvatarAdapter.js';
 
 export class MMDHumanoidAdapter {
     constructor() {
@@ -218,34 +218,61 @@ export class MMDHumanoidAdapter {
 
         if (!rootObject) return null;
 
+        const allBones = [];
         rootObject.traverse((node) => {
             if (node.isSkinnedMesh && !this.mesh) {
                 this.mesh = node;
             }
             if (node.isBone) {
+                allBones.push(node);
                 const name = node.name;
                 const mappedName = this.boneMap[name];
                 if (mappedName && !this.normalizedBones[mappedName]) {
                     this.normalizedBones[mappedName] = node;
                 }
-                const lower = name.toLowerCase();
-                for (const [key, target] of Object.entries(this.boneMap)) {
-                    if (lower === key.toLowerCase() && !this.normalizedBones[target]) {
-                        this.normalizedBones[target] = node;
-                    }
-                }
-                for (const [key, target] of Object.entries(this.boneMap)) {
-                    if (lower.includes(target.toLowerCase()) && !this.normalizedBones[target]) {
-                        this.normalizedBones[target] = node;
-                    }
-                }
             }
         });
+
+        for (const [canonical, aliases] of Object.entries(MMD_BONE_MAP)) {
+            if (this.normalizedBones[canonical]) continue;
+            for (const alias of aliases) {
+                const aLow = String(alias).toLowerCase();
+                const found = allBones.find(b => b.name === alias || b.name.toLowerCase() === aLow || b.name.toLowerCase().includes(aLow));
+                if (found) {
+                    this.normalizedBones[canonical] = found;
+                    break;
+                }
+            }
+        }
 
         if (!this.normalizedBones['hips']) {
             const fallbackNode = this.normalizedBones['root'] || (this.mesh && this.mesh.skeleton && this.mesh.skeleton.bones && this.mesh.skeleton.bones[0]) || rootObject;
             this.normalizedBones['hips'] = fallbackNode;
         }
+
+        const resolveLimbFallback = (canonical, isLeft, isArm) => {
+            if (this.normalizedBones[canonical]) return;
+            for (const b of allBones) {
+                const bn = b.name.toLowerCase();
+                if (isArm && (bn.includes('arm') || bn.includes('腕') || bn.includes('肩')) && !bn.includes('twist') && !bn.includes('捩')) {
+                    if (isLeft && (bn.includes('l') || bn.includes('左'))) { this.normalizedBones[canonical] = b; return; }
+                    if (!isLeft && (bn.includes('r') || bn.includes('右'))) { this.normalizedBones[canonical] = b; return; }
+                }
+                if (!isArm && (bn.includes('leg') || bn.includes('thigh') || bn.includes('足') || bn.includes('腿')) && !bn.includes('ik')) {
+                    if (isLeft && (bn.includes('l') || bn.includes('左'))) { this.normalizedBones[canonical] = b; return; }
+                    if (!isLeft && (bn.includes('r') || bn.includes('右'))) { this.normalizedBones[canonical] = b; return; }
+                }
+            }
+        };
+
+        resolveLimbFallback('leftUpperArm', true, true);
+        resolveLimbFallback('rightUpperArm', false, true);
+        resolveLimbFallback('leftLowerArm', true, true);
+        resolveLimbFallback('rightLowerArm', false, true);
+        resolveLimbFallback('leftUpperLeg', true, false);
+        resolveLimbFallback('rightUpperLeg', false, false);
+        resolveLimbFallback('leftLowerLeg', true, false);
+        resolveLimbFallback('rightLowerLeg', false, false);
 
         const humanBones = {};
         const normalizedRestPose = {};

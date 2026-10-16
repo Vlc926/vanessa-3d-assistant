@@ -202,18 +202,19 @@ class ScreenInteractor(QObject):
                 target = all_wins[0]
 
         if not target:
-            self.curious_inspect_screen()
-            return
-
-        wx, wy, ww, wh = target["x"], target["y"], target["w"], target["h"]
-        title = target.get("title") or target.get("class") or "tu ventana"
-
-        tx = wx + (ww // 2) - (ov.width() // 2)
-        tx = max(25, min(sw - ov.width() - 30, tx))
-
-        overlap_offset = int(ov.height() * 0.22)
-        ty = wy - ov.height() + overlap_offset
-        ty = max(20, min(sh - ov.height() - 35, ty))
+            tx = max(25, min(sw - ov.width() - 30, ov.x()))
+            overlap_offset = int(ov.height() * 0.18)
+            ty = sh - ov.height() - 25 + overlap_offset
+            title = "escritorio"
+            target = {"x": tx, "y": sh - 40, "w": ov.width(), "h": 40, "title": "escritorio", "class": "desktop"}
+        else:
+            wx, wy, ww, wh = target["x"], target["y"], target["w"], target["h"]
+            title = target.get("title") or target.get("class") or "tu ventana"
+            tx = wx + (ww // 2) - (ov.width() // 2)
+            tx = max(25, min(sw - ov.width() - 30, tx))
+            overlap_offset = int(ov.height() * 0.22)
+            ty = wy - ov.height() + overlap_offset
+            ty = max(20, min(sh - ov.height() - 35, ty))
 
         self.current_perched_window = target
 

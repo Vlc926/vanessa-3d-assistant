@@ -20,35 +20,35 @@ export const MMD_MORPH_MAP = {
 };
 
 export const MMD_BONE_MAP = {
-  root: ['全ての親', '操作中心', 'Bip001', 'Root'],
-  hips: ['下半身', 'センター', 'グルーブ', '腰', 'Bip001 Pelvis', 'Bip001_Pelvis', 'Pelvis', 'Hips'],
-  spine: ['上半身', 'Bip001 Spine', 'Bip001_Spine', 'Spine'],
-  chest: ['上半身2', 'Bip001 Spine1', 'Bip001_Spine1', 'Chest'],
-  upperChest: ['上半身3', 'Bip001 Spine2', 'Bip001_Spine2', 'UpperChest'],
-  neck: ['首', 'Bip001 Neck', 'Bip001_Neck', 'Neck'],
-  head: ['頭', 'Bip001 Head', 'Bip001_Head', 'Head'],
+  root: ['全ての親', '操作中心', 'Bip001', 'Root', 'root'],
+  hips: ['下半身', 'センター', 'グルーブ', '腰', '腰キャンセル左', '腰キャンセル右', 'Bip001 Pelvis', 'Bip001_Pelvis', 'Pelvis', 'Hips', 'waist', 'root_pelvis'],
+  spine: ['上半身', '脊椎', 'Bip001 Spine', 'Bip001_Spine', 'Spine', 'spine1', 'spine_01'],
+  chest: ['上半身2', '胸', 'Bip001 Spine1', 'Bip001_Spine1', 'Chest', 'spine2', 'spine_02'],
+  upperChest: ['上半身3', 'Bip001 Spine2', 'Bip001_Spine2', 'UpperChest', 'spine3'],
+  neck: ['首', '脖子', 'Bip001 Neck', 'Bip001_Neck', 'Neck', 'c_neck'],
+  head: ['頭', '头', 'Bip001 Head', 'Bip001_Head', 'Head', 'c_head'],
   leftEye: ['左目', 'Eye_L', 'Bip001 L Eye'],
   rightEye: ['右目', 'Eye_R', 'Bip001 R Eye'],
   jaw: ['あご', '顎', 'Jaw', 'Bip001 Jaw'],
   tongue: ['舌', '舌1', 'Tongue', 'Bip001 Tongue'],
   leftCheek: ['左頬', 'Cheek_L'],
   rightCheek: ['右頬', 'Cheek_R'],
-  leftShoulder: ['左肩', '左肩P', 'Bip001 L Clavicle', 'Bip001_L_Clavicle', 'Shoulder_L'],
-  rightShoulder: ['右肩', '右肩P', 'Bip001 R Clavicle', 'Bip001_R_Clavicle', 'Shoulder_R'],
-  leftUpperArm: ['左腕', 'Bip001 L UpperArm', 'Bip001_L_UpperArm', 'UpperArm_L'],
-  rightUpperArm: ['右腕', 'Bip001 R UpperArm', 'Bip001_R_UpperArm', 'UpperArm_R'],
-  leftLowerArm: ['左ひじ', 'Bip001 L Forearm', 'Bip001_L_Forearm', 'LowerArm_L'],
-  rightLowerArm: ['右ひじ', 'Bip001 R Forearm', 'Bip001_R_Forearm', 'LowerArm_R'],
-  leftHand: ['左手首', 'Bip001 L Hand', 'Bip001_L_Hand', 'Hand_L'],
-  rightHand: ['右手首', 'Bip001 R Hand', 'Bip001_R_Hand', 'Hand_R'],
-  leftUpperLeg: ['左足', '左足D', 'Bip001 L Thigh', 'Bip001_L_Thigh', 'UpperLeg_L'],
-  rightUpperLeg: ['右足', '右足D', 'Bip001 R Thigh', 'Bip001_R_Thigh', 'UpperLeg_R'],
-  leftLowerLeg: ['左ひざ', '左ひざD', 'Bip001 L Calf', 'Bip001_L_Calf', 'LowerLeg_L'],
-  rightLowerLeg: ['右ひざ', '右ひざD', 'Bip001 R Calf', 'Bip001_R_Calf', 'LowerLeg_R'],
-  leftFoot: ['左足首', '左足首D', 'Bip001 L Foot', 'Bip001_L_Foot', 'Foot_L'],
-  rightFoot: ['右足首', '右足首D', 'Bip001 R Foot', 'Bip001_R_Foot', 'Foot_R'],
-  leftToes: ['左つま先', 'Bip001 L Toe0', 'Bip001_L_Toe0', 'Toes_L'],
-  rightToes: ['右つま先', 'Bip001 R Toe0', 'Bip001_R_Toe0', 'Toes_R'],
+  leftShoulder: ['左肩', '左肩P', '左肩C', '肩_L', 'Bip001 L Clavicle', 'Bip001_L_Clavicle', 'Shoulder_L', 'L_Shoulder', 'shoulder.l', 'clavicle.l'],
+  rightShoulder: ['右肩', '右肩P', '右肩C', '肩_R', 'Bip001 R Clavicle', 'Bip001_R_Clavicle', 'Shoulder_R', 'R_Shoulder', 'shoulder.r', 'clavicle.r'],
+  leftUpperArm: ['左腕', '左腕捩', '左腕捩1', '左上臂', '左臂', '腕_L', 'Bip001 L UpperArm', 'Bip001_L_UpperArm', 'UpperArm_L', 'L_UpperArm', 'Arm_L', 'L_Arm', 'arm.l', 'upper_arm.l'],
+  rightUpperArm: ['右腕', '右腕捩', '右腕捩1', '右上臂', '右臂', '腕_R', 'Bip001 R UpperArm', 'Bip001_R_UpperArm', 'UpperArm_R', 'R_UpperArm', 'Arm_R', 'R_Arm', 'arm.r', 'upper_arm.r'],
+  leftLowerArm: ['左ひじ', '左肘', '左前臂', '左手捩', '左手捩1', 'ひじ_L', 'Bip001 L Forearm', 'Bip001_L_Forearm', 'LowerArm_L', 'L_LowerArm', 'Forearm_L', 'L_Forearm', 'Elbow_L', 'L_Elbow', 'forearm.l', 'elbow.l'],
+  rightLowerArm: ['右ひじ', '右肘', '右前臂', '右手捩', '右手捩1', 'ひじ_R', 'Bip001 R Forearm', 'Bip001_R_Forearm', 'LowerArm_R', 'R_LowerArm', 'Forearm_R', 'R_Forearm', 'Elbow_R', 'R_Elbow', 'forearm.r', 'elbow.r'],
+  leftHand: ['左手首', '左手', '左手腕', '手首_L', 'Bip001 L Hand', 'Bip001_L_Hand', 'Hand_L', 'L_Hand', 'Wrist_L', 'L_Wrist', 'hand.l', 'wrist.l'],
+  rightHand: ['右手首', '右手', '右手腕', '手首_R', 'Bip001 R Hand', 'Bip001_R_Hand', 'Hand_R', 'R_Hand', 'Wrist_R', 'R_Wrist', 'hand.r', 'wrist.r'],
+  leftUpperLeg: ['左足', '左足D', '左腿', '左大腿', '足_L', 'Bip001 L Thigh', 'Bip001_L_Thigh', 'UpperLeg_L', 'L_UpperLeg', 'Thigh_L', 'L_Thigh', 'Leg_L', 'thigh.l', 'upper_leg.l'],
+  rightUpperLeg: ['右足', '右足D', '右腿', '右大腿', '足_R', 'Bip001 R Thigh', 'Bip001_R_Thigh', 'UpperLeg_R', 'R_UpperLeg', 'Thigh_R', 'R_Thigh', 'Leg_R', 'thigh.r', 'upper_leg.r'],
+  leftLowerLeg: ['左ひざ', '左ひざD', '左ひざ補助', '左膝', '左小腿', 'ひざ_L', 'Bip001 L Calf', 'Bip001_L_Calf', 'LowerLeg_L', 'L_LowerLeg', 'Calf_L', 'L_Calf', 'Knee_L', 'L_Knee', 'calf.l', 'knee.l'],
+  rightLowerLeg: ['右ひざ', '右ひざD', '右ひざ補助', '右膝', '右小腿', 'ひざ_R', 'Bip001 R Calf', 'Bip001_R_Calf', 'LowerLeg_R', 'R_LowerLeg', 'Calf_R', 'R_Calf', 'Knee_R', 'R_Knee', 'calf.r', 'knee.r'],
+  leftFoot: ['左足首', '左足首D', '左脚踝', '左踝', '足首_L', 'Bip001 L Foot', 'Bip001_L_Foot', 'Foot_L', 'L_Foot', 'Ankle_L', 'L_Ankle', 'foot.l', 'ankle.l'],
+  rightFoot: ['右足首', '右足首D', '右脚踝', '右踝', '足首_R', 'Bip001 R Foot', 'Bip001_R_Foot', 'Foot_R', 'R_Foot', 'Ankle_R', 'R_Ankle', 'foot.r', 'ankle.r'],
+  leftToes: ['左つま先', '左足先EX', '左脚趾', 'つま先_L', 'Bip001 L Toe0', 'Bip001_L_Toe0', 'Toes_L', 'L_Toe', 'toe.l'],
+  rightToes: ['右つま先', '右足先EX', '右脚趾', 'つま先_R', 'Bip001 R Toe0', 'Bip001_R_Toe0', 'Toes_R', 'R_Toe', 'toe.r'],
   leftThumbProximal: ['左親指１', 'Bip001 L Finger0', 'Thumb1_L'],
   leftIndexProximal: ['左人指１', 'Bip001 L Finger1', 'Index1_L'],
   leftMiddleProximal: ['左中指１', 'Bip001 L Finger2', 'Middle1_L'],
@@ -105,10 +105,36 @@ export function NaturalBindPoseFix(target) {
 
   if (lShoulder) lShoulder.rotation.set(0.02, 0.0, -0.05);
   if (rShoulder) rShoulder.rotation.set(0.02, 0.0, 0.05);
-  if (lUpperArm) lUpperArm.rotation.set(0.11, 0.04, -0.70);
-  if (rUpperArm) rUpperArm.rotation.set(0.11, -0.04, 0.70);
-  if (lLowerArm) lLowerArm.rotation.set(0.21, 0.0, 0.14);
-  if (rLowerArm) rLowerArm.rotation.set(0.21, 0.0, -0.14);
+
+  const enforceArmDown = (upperArm, lowerArm, isLeft) => {
+    if (!upperArm) return;
+    if (upperArm.parent) upperArm.parent.updateWorldMatrix(true, false);
+    upperArm.updateWorldMatrix(true, false);
+    let needLower = true;
+    if (lowerArm) {
+      lowerArm.updateWorldMatrix(true, false);
+      const posU = new THREE.Vector3();
+      const posL = new THREE.Vector3();
+      upperArm.getWorldPosition(posU);
+      lowerArm.getWorldPosition(posL);
+      const dir = posL.sub(posU).normalize();
+      const angle = dir.angleTo(new THREE.Vector3(0, -1, 0));
+      if (angle < 0.38) {
+        needLower = false;
+      }
+    }
+    if (needLower) {
+      const zRot = isLeft ? -0.72 : 0.72;
+      upperArm.rotation.set(0.10, isLeft ? 0.04 : -0.04, zRot);
+      if (lowerArm) {
+        lowerArm.rotation.set(0.20, 0.0, isLeft ? 0.12 : -0.12);
+      }
+    }
+  };
+
+  enforceArmDown(lUpperArm, lLowerArm, true);
+  enforceArmDown(rUpperArm, rLowerArm, false);
+
   if (lUpperLeg) lUpperLeg.rotation.set(-0.02, 0.0, -0.02);
   if (rUpperLeg) rUpperLeg.rotation.set(-0.02, 0.0, 0.02);
   if (lLowerLeg) lLowerLeg.rotation.set(0.05, 0.0, 0.0);
@@ -343,6 +369,7 @@ export class MMDAvatar extends BaseAvatar {
     }
     this.morphIndices = new Map();
     this.boneMap = new Map();
+    this.targetMorphWeights = new Map();
     this._initMorphMap();
     this._initBoneMap();
     this._applyToonWarmShading(mesh);
@@ -391,14 +418,17 @@ export class MMDAvatar extends BaseAvatar {
         const mats = Array.isArray(node.material) ? node.material : [node.material];
         mats.forEach((mat) => {
           mat.side = THREE.DoubleSide;
-          if (mat.color) {
-            mat.color.setRGB(1.0, 1.0, 1.0);
+          if (mat.map) {
+            if (mat.color) mat.color.setRGB(1.0, 1.0, 1.0);
+          } else {
+            if (!mat.color) mat.color = new THREE.Color(0xf5e6dc);
           }
           if (mat.emissive) {
-            mat.emissive.setRGB(0.025, 0.018, 0.015);
+            mat.emissive.setRGB(0.018, 0.015, 0.012);
           }
-          mat.roughness = this.profileType === 'ZZZAvatarProfile' ? 0.24 : 0.32;
-          mat.metalness = this.profileType === 'ZZZAvatarProfile' ? 0.12 : 0.02;
+          mat.shininess = Math.min(6.0, mat.shininess || 6.0);
+          mat.roughness = this.profileType === 'ZZZAvatarProfile' ? 0.35 : 0.42;
+          mat.metalness = this.profileType === 'ZZZAvatarProfile' ? 0.08 : 0.02;
           mat.depthWrite = true;
           mat.alphaTest = 0.05;
         });
@@ -411,14 +441,10 @@ export class MMDAvatar extends BaseAvatar {
     const w = Math.max(0.0, Math.min(1.0, Number(weight) || 0.0));
     const targetNames = MMD_MORPH_MAP[canonicalName] || [canonicalName];
     for (const jaName of targetNames) {
-      if (this.morphIndices.has(jaName)) {
-        const idx = this.morphIndices.get(jaName);
-        this.mesh.morphTargetInfluences[idx] = w;
-        return;
-      }
-      if (this.morphIndices.has(jaName.toLowerCase())) {
-        const idx = this.morphIndices.get(jaName.toLowerCase());
-        this.mesh.morphTargetInfluences[idx] = w;
+      let idx = this.morphIndices.get(jaName);
+      if (idx === undefined) idx = this.morphIndices.get(jaName.toLowerCase());
+      if (idx !== undefined) {
+        this.targetMorphWeights.set(idx, w);
         return;
       }
     }
@@ -435,14 +461,41 @@ export class MMDAvatar extends BaseAvatar {
       if (this.boneMap.has(candidate)) {
         return this.boneMap.get(candidate);
       }
-      if (this.boneMap.has(String(candidate).toLowerCase())) {
-        return this.boneMap.get(String(candidate).toLowerCase());
+      const cLow = String(candidate).toLowerCase();
+      if (this.boneMap.has(cLow)) {
+        return this.boneMap.get(cLow);
       }
     }
     for (const [k, b] of this.boneMap.entries()) {
       for (const candidate of searchList) {
-        if (k.includes(String(candidate)) || k.includes( canonicalBoneName.toLowerCase())) {
+        const cStr = String(candidate).toLowerCase();
+        if (k.toLowerCase().includes(cStr)) {
           return b;
+        }
+      }
+    }
+    if (this.mesh && this.mesh.skeleton && this.mesh.skeleton.bones) {
+      const bones = this.mesh.skeleton.bones;
+      const isL = canonicalBoneName.toLowerCase().includes('left');
+      const isR = canonicalBoneName.toLowerCase().includes('right');
+      const isArm = canonicalBoneName.toLowerCase().includes('arm');
+      const isLeg = canonicalBoneName.toLowerCase().includes('leg');
+      if (isArm) {
+        for (const b of bones) {
+          const bn = b.name.toLowerCase();
+          if ((bn.includes('arm') || bn.includes('腕') || bn.includes('肩')) && !bn.includes('twist') && !bn.includes('捩')) {
+            if (isL && (bn.includes('l') || bn.includes('左'))) return b;
+            if (isR && (bn.includes('r') || bn.includes('右'))) return b;
+          }
+        }
+      }
+      if (isLeg) {
+        for (const b of bones) {
+          const bn = b.name.toLowerCase();
+          if ((bn.includes('leg') || bn.includes('thigh') || bn.includes('足') || bn.includes('腿')) && !bn.includes('ik')) {
+            if (isL && (bn.includes('l') || bn.includes('左'))) return b;
+            if (isR && (bn.includes('r') || bn.includes('右'))) return b;
+          }
         }
       }
     }
@@ -450,8 +503,20 @@ export class MMDAvatar extends BaseAvatar {
   }
 
   update(deltaTime) {
+    const dt = Math.max(0.001, Math.min(0.05, Number(deltaTime) || 0.016));
     if (this.helper) {
-      this.helper.update(deltaTime);
+      this.helper.update(dt);
+    }
+    if (this.mesh && this.mesh.morphTargetInfluences && this.targetMorphWeights.size > 0) {
+      const factor = Math.min(1.0, dt * 18.0);
+      this.targetMorphWeights.forEach((targetW, idx) => {
+        const cur = this.mesh.morphTargetInfluences[idx] || 0.0;
+        if (Math.abs(cur - targetW) > 0.002) {
+          this.mesh.morphTargetInfluences[idx] = THREE.MathUtils.lerp(cur, targetW, factor);
+        } else {
+          this.mesh.morphTargetInfluences[idx] = targetW;
+        }
+      });
     }
   }
 

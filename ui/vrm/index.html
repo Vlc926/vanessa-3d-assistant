@@ -90,10 +90,22 @@
             width: auto;
             border-radius: 9999px;
             padding: 2px 6px;
+            opacity: 0.18;
+            background: rgba(15, 23, 42, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            box-shadow: none;
+        }
+        #hud-container.collapsed:hover {
+            opacity: 0.95;
+            background: rgba(15, 23, 42, 0.85);
+            border-color: rgba(56, 189, 248, 0.45);
         }
         #hud-container.collapsed .hud-header {
             border-bottom: none;
             padding: 2px 4px;
+        }
+        #hud-container.collapsed .hud-title-row {
+            display: none;
         }
         #hud-container.collapsed #hud-body {
             display: none;
@@ -268,7 +280,7 @@
                 <span class="hud-title">VANESSA</span>
                 <span id="directive-state-badge" class="state-badge state-idle">IDLE</span>
             </div>
-            <button id="btn-toggle-hud" class="hud-btn-icon" title="Toggle HUD">+</button>
+            <button id="btn-toggle-hud" class="hud-btn-icon" title="Toggle HUD">⚙️</button>
         </div>
         <div id="hud-body" class="hud-content">
             <div class="hud-group-label">Architecture Profile</div>
