@@ -113,21 +113,29 @@ export class AnimeFacialDriver {
         this.aliasMap = {
             joy: ['happy', 'Joy', 'joy', 'Fcl_ALL_Joy', 'Fcl_EYE_Joy', 'Fcl_MTH_Joy', '笑顔', '笑い', 'にこり'],
             happy: ['happy', 'Joy', 'joy', 'Fcl_ALL_Joy', 'Fcl_EYE_Joy', 'Fcl_MTH_Joy', '笑顔', '笑い', 'にこり'],
+            smile: ['smile', '笑い', 'にこり', 'にっこり', '笑顔', 'happy', 'Joy'],
             fun: ['relaxed', 'Fun', 'fun', 'Fcl_ALL_Fun', 'Fcl_MTH_Fun', 'なごみ'],
             relaxed: ['relaxed', 'Fun', 'fun', 'Fcl_ALL_Fun', 'Fcl_MTH_Fun', 'なごみ', '穏やか'],
-            angry: ['angry', 'Angry', 'Fcl_ALL_Angry', 'Fcl_BRW_Angry', 'Fcl_MTH_Angry', '怒り'],
+            angry: ['angry', 'Angry', 'Fcl_ALL_Angry', 'Fcl_BRW_Angry', 'Fcl_MTH_Angry', '怒り', '怒り２'],
+            pout: ['pout', '怒り', '怒り２', 'ムッ', 'Fcl_MTH_Angry'],
             sorrow: ['sad', 'Sorrow', 'sorrow', 'Fcl_ALL_Sorrow', 'Fcl_BRW_Sorrow', '困る', '悲しい'],
             sad: ['sad', 'Sorrow', 'sorrow', 'Fcl_ALL_Sorrow', 'Fcl_BRW_Sorrow', '困る', '悲しい'],
             surprised: ['surprised', 'Surprised', 'Fcl_ALL_Surprised', 'Fcl_EYE_Surprised', 'びっくり', '驚き'],
+            curious: ['curious', 'びっくり', '驚き', 'じと目'],
+            thinking: ['thinking', '困る', '真面目', 'なごみ'],
+            doubt: ['doubt', '困る', '真面目', 'なごみ'],
+            smug: ['smug', 'じと目', 'ジト目', 'にやり'],
             blink: ['blink', 'Blink', 'Fcl_EYE_Close', 'まばたき'],
-            blinkleft: ['blinkLeft', 'Blink_L', 'blink_l', 'Fcl_EYE_Close_L', 'ウィンク'],
-            blinkright: ['blinkRight', 'Blink_R', 'blink_r', 'Fcl_EYE_Close_R', 'ウィンク右'],
+            blinkleft: ['blinkLeft', 'Blink_L', 'blink_l', 'Fcl_EYE_Close_L', 'ウィンク', 'ウインク'],
+            blinkright: ['blinkRight', 'Blink_R', 'blink_r', 'Fcl_EYE_Close_R', 'ウィンク右', 'ウインク右'],
+            wink: ['wink', 'ウィンク', 'ウインク', 'ウィンク２', 'blinkLeft'],
             aa: ['aa', 'A', 'Fcl_MTH_A', 'あ'],
             ih: ['ih', 'I', 'Fcl_MTH_I', 'い'],
             ou: ['ou', 'U', 'Fcl_MTH_U', 'う'],
             ee: ['ee', 'E', 'Fcl_MTH_E', 'え'],
             oh: ['oh', 'O', 'Fcl_MTH_O', 'お'],
-            shy: ['shy', '照れ', 'テレ', '赤面', 'チーク', 'Blush']
+            shy: ['shy', '照れ', 'テレ', '赤面', 'チーク', 'Blush'],
+            blush: ['blush', '照れ', 'テレ', '赤面', 'チーク', 'Blush', 'shy']
         };
 
         this.loadLearnedBehaviors();

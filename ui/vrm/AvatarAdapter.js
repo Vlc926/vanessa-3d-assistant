@@ -63,14 +63,15 @@ export const MMD_BONE_MAP = {
 
 export const ZZZ_CHARACTER_KEYS = [
   'anby_demara', 'burnice_white', 'ellen_joe', 'hoshimi_miyabi',
-  'jane_doe', 'nicole_demara', 'belle_proxy', 'billy_kid'
+  'jane_doe', 'nicole_demara', 'belle_proxy', 'billy_kid',
+  '安比', '柏妮思', '艾莲', '星见雅', '星見雅', '简', '妮可'
 ];
 
 export function detectArchitectureProfile(modelPath = '') {
   const lower = String(modelPath || '').toLowerCase();
   for (const zzzKey of ZZZ_CHARACTER_KEYS) {
-    const shortKey = zzzKey.split('_')[0];
-    if (lower.includes(zzzKey) || lower.includes(shortKey)) {
+    const shortKey = zzzKey.split('_')[0].toLowerCase();
+    if (lower.includes(zzzKey.toLowerCase()) || lower.includes(shortKey)) {
       return 'ZZZAvatarProfile';
     }
   }
@@ -119,15 +120,19 @@ export function NaturalBindPoseFix(target) {
       lowerArm.getWorldPosition(posL);
       const dir = posL.sub(posU).normalize();
       const angle = dir.angleTo(new THREE.Vector3(0, -1, 0));
-      if (angle < 0.38) {
+      if (angle < 0.35) {
         needLower = false;
       }
     }
     if (needLower) {
-      const zRot = isLeft ? -0.72 : 0.72;
-      upperArm.rotation.set(0.10, isLeft ? 0.04 : -0.04, zRot);
+      const zRot = isLeft ? -1.22 : 1.22;
+      upperArm.rotation.set(0.12, isLeft ? 0.04 : -0.04, zRot);
       if (lowerArm) {
-        lowerArm.rotation.set(0.20, 0.0, isLeft ? 0.12 : -0.12);
+        lowerArm.rotation.set(0.20, 0.0, isLeft ? 0.14 : -0.14);
+      }
+      const hand = isLeft ? getBoneNode('leftHand') : getBoneNode('rightHand');
+      if (hand) {
+        hand.rotation.set(0.06, 0.0, isLeft ? -0.05 : 0.05);
       }
     }
   };

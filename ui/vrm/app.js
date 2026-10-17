@@ -588,6 +588,7 @@ export function setModel(path) {
                     footIkSolver.setVrm(adapted);
                     animeFxRenderer.setVrm(adapted);
                     squashStretchModifier.setVrm(adapted);
+                    squashStretchModifier.setProfile(detectedProfile);
                     animeFacialDriver.setVrm(adapted);
                 }
                 triggerHologramTransition(false);
@@ -937,6 +938,15 @@ window.vrmController = {
     syncLocomotionStep: (vx = 0.0, vy = 0.0, stridePhase = 0.0) => {
         footIkSolver.syncLocomotionStep(vx, vy, stridePhase);
         animationEngine.syncLocomotionStep(vx, vy, stridePhase, 0, 0);
+        if (dedicatedPmxController && typeof dedicatedPmxController.syncLocomotionStep === 'function') {
+            dedicatedPmxController.syncLocomotionStep(vx, vy, stridePhase);
+        }
+        if (squashStretchModifier && typeof squashStretchModifier.absorbLocomotion === 'function') {
+            const spd = Math.hypot(vx, vy);
+            if (spd > 1.5) {
+                squashStretchModifier.absorbLocomotion(Math.sin(stridePhase) * (spd / 120.0));
+            }
+        }
     },
     setPhysicalState: (state, options = {}) => {
         notifyActivity('action');

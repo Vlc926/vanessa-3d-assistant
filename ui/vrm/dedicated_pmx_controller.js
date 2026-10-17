@@ -9,7 +9,12 @@ export const PMX_MODEL_PROFILES = {
         armLeft: [0.12, 0.04, -1.22],
         armRight: [0.12, -0.04, 1.22],
         forearmLeft: [0.20, 0.0, 0.15],
-        forearmRight: [0.20, 0.0, -0.15]
+        forearmRight: [0.20, 0.0, -0.15],
+        swaySpeed: 1.35,
+        swayAmp: 0.040,
+        headTilt: 0.080,
+        breathSpeed: 2.4,
+        specialMorphs: { happy: '笑い', smile: 'にこり', wink: 'ウィンク', surprised: 'びっくり', angry: '怒り', smug: 'じと目', curious: 'びっくり', thinking: '困る', doubt: '困る', shy: '照れ', pout: '怒り', blush: '照れ' }
     },
     'ellen_joe': {
         scale: 0.088,
@@ -19,7 +24,12 @@ export const PMX_MODEL_PROFILES = {
         armLeft: [0.10, 0.05, -1.25],
         armRight: [0.10, -0.05, 1.25],
         forearmLeft: [0.18, 0.0, 0.12],
-        forearmRight: [0.18, 0.0, -0.12]
+        forearmRight: [0.18, 0.0, -0.12],
+        swaySpeed: 1.15,
+        swayAmp: 0.032,
+        headTilt: 0.065,
+        breathSpeed: 2.2,
+        specialMorphs: { happy: 'にこり', smile: '笑い', wink: 'ウィンク', surprised: 'びっくり', angry: '怒り', smug: 'じと目', curious: 'じと目', thinking: '困る', doubt: '困る', shy: '照れ', pout: '怒り', blush: '照れ' }
     },
     'jane_doe': {
         scale: 0.087,
@@ -29,7 +39,12 @@ export const PMX_MODEL_PROFILES = {
         armLeft: [0.11, 0.04, -1.20],
         armRight: [0.11, -0.04, 1.20],
         forearmLeft: [0.22, 0.0, 0.14],
-        forearmRight: [0.22, 0.0, -0.14]
+        forearmRight: [0.22, 0.0, -0.14],
+        swaySpeed: 1.40,
+        swayAmp: 0.045,
+        headTilt: 0.090,
+        breathSpeed: 2.5,
+        specialMorphs: { happy: '笑い', smile: 'にこり', wink: 'ウィンク', surprised: 'びっくり', angry: '怒り', smug: 'じと目', curious: 'びっくり', thinking: '困る', doubt: '困る', shy: '照れ', pout: '怒り', blush: '照れ' }
     },
     'anby_demara': {
         scale: 0.086,
@@ -39,7 +54,12 @@ export const PMX_MODEL_PROFILES = {
         armLeft: [0.10, 0.05, -1.22],
         armRight: [0.10, -0.05, 1.22],
         forearmLeft: [0.19, 0.0, 0.12],
-        forearmRight: [0.19, 0.0, -0.12]
+        forearmRight: [0.19, 0.0, -0.12],
+        swaySpeed: 1.05,
+        swayAmp: 0.028,
+        headTilt: 0.050,
+        breathSpeed: 2.1,
+        specialMorphs: { happy: 'にこり', smile: '笑い', wink: 'ウィンク', surprised: 'びっくり', angry: '怒り', smug: 'じと目', curious: 'びっくり', thinking: '困る', doubt: '困る', shy: '照れ', pout: '怒り', blush: '照れ' }
     },
     'nicole_demara': {
         scale: 0.089,
@@ -49,7 +69,12 @@ export const PMX_MODEL_PROFILES = {
         armLeft: [0.13, 0.04, -1.24],
         armRight: [0.13, -0.04, 1.24],
         forearmLeft: [0.21, 0.0, 0.16],
-        forearmRight: [0.21, 0.0, -0.16]
+        forearmRight: [0.21, 0.0, -0.16],
+        swaySpeed: 1.30,
+        swayAmp: 0.042,
+        headTilt: 0.085,
+        breathSpeed: 2.3,
+        specialMorphs: { happy: '笑い', smile: 'にこり', wink: 'ウィンク', surprised: 'びっくり', angry: '怒り', smug: 'じと目', curious: 'びっくり', thinking: '困る', doubt: '困る', shy: '照れ', pout: '怒り', blush: '照れ' }
     },
     'hoshimi_miyabi': {
         scale: 0.088,
@@ -59,7 +84,12 @@ export const PMX_MODEL_PROFILES = {
         armLeft: [0.10, 0.05, -1.23],
         armRight: [0.10, -0.05, 1.23],
         forearmLeft: [0.18, 0.0, 0.13],
-        forearmRight: [0.18, 0.0, -0.13]
+        forearmRight: [0.18, 0.0, -0.13],
+        swaySpeed: 1.10,
+        swayAmp: 0.030,
+        headTilt: 0.060,
+        breathSpeed: 2.0,
+        specialMorphs: { happy: '笑い', smile: 'にこり', wink: 'ウィンク', surprised: 'びっくり', angry: '怒り', smug: 'じと目', curious: 'びっくり', thinking: '困る', doubt: '困る', shy: '照れ', pout: '怒り', blush: '照れ' }
     },
     'hoshimachi_suisei': {
         scale: 0.086,
@@ -234,6 +264,19 @@ export class DedicatedPMXController {
         this.isWalking = false;
     }
 
+    syncLocomotionStep(vx = 0.0, vy = 0.0, stridePhase = 0.0) {
+        const speed = Math.hypot(vx, vy);
+        if (speed > 1.5) {
+            this.isWalking = true;
+            this.walkSpeed = Math.max(0.2, Math.min(2.5, speed / 80.0));
+            if (stridePhase !== undefined && stridePhase !== null && !isNaN(stridePhase)) {
+                this.walkPhase = Number(stridePhase);
+            }
+        } else {
+            this.isWalking = false;
+        }
+    }
+
     setWalkSpeed(speed) {
         this.walkSpeed = Math.max(0.1, Math.min(2.5, Number(speed) || 1.0));
     }
@@ -256,6 +299,12 @@ export class DedicatedPMXController {
         for (const k of Object.keys(PMX_MODEL_PROFILES)) {
             if (lower.includes(k)) return k;
         }
+        if (lower.includes('burnice') || lower.includes('柏妮思')) return 'burnice_white';
+        if (lower.includes('ellen') || lower.includes('艾莲')) return 'ellen_joe';
+        if (lower.includes('miyabi') || lower.includes('hoshimi') || lower.includes('星见雅') || lower.includes('星見雅')) return 'hoshimi_miyabi';
+        if (lower.includes('jane') || lower.includes('简')) return 'jane_doe';
+        if (lower.includes('anby') || lower.includes('安比')) return 'anby_demara';
+        if (lower.includes('nicole') || lower.includes('妮可')) return 'nicole_demara';
         if (lower.includes('miku') || lower.includes('ミク') || lower.includes('v4c') || lower.includes('野餐')) return 'hatsune_miku_v4c';
         if (lower.includes('suisei') || lower.includes('すいせい') || lower.includes('vanessa')) return 'hoshimachi_suisei';
         if (lower.includes('marine') || lower.includes('マリン')) return 'houshou_marine';
@@ -339,6 +388,14 @@ export class DedicatedPMXController {
         }
         if (rForearm) {
             rForearm.rotation.set(p.forearmRight[0] || 0.21, p.forearmRight[1], p.forearmRight[2]);
+        }
+        const lHand = vrm.humanoid.getNormalizedBoneNode('leftHand') || vrm.humanoid.getRawBoneNode('leftHand');
+        const rHand = vrm.humanoid.getNormalizedBoneNode('rightHand') || vrm.humanoid.getRawBoneNode('rightHand');
+        if (lHand) {
+            lHand.rotation.set(0.06, 0.0, -0.05);
+        }
+        if (rHand) {
+            rHand.rotation.set(0.06, 0.0, 0.05);
         }
         if (lUpperLeg) {
             lUpperLeg.rotation.set(-0.02, 0.0, -0.02);
