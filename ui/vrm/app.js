@@ -45,15 +45,15 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.18;
 document.body.appendChild(renderer.domElement);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.70);
 scene.add(ambientLight);
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.25);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
 dirLight.position.set(1.2, 2.6, 2.2);
 scene.add(dirLight);
-const fillLight = new THREE.DirectionalLight(0xeef4ff, 0.65);
+const fillLight = new THREE.DirectionalLight(0xeef4ff, 0.35);
 fillLight.position.set(-1.2, 0.8, 1.5);
 scene.add(fillLight);
-const rimLight = new THREE.DirectionalLight(0xfff0f6, 0.95);
+const rimLight = new THREE.DirectionalLight(0xfff0f6, 0.20);
 rimLight.position.set(-1.2, 2.5, -2.0);
 scene.add(rimLight);
 
@@ -384,7 +384,7 @@ export function setThrottling(throttled = false, targetFps = 15.0) {
 export const ZZZHybridToonShader = {
     applyToRoot(root, isZZZ = true) {
         if (!root) return;
-        rimLight.intensity = isZZZ ? 1.42 : 0.95;
+        rimLight.intensity = isZZZ ? 0.25 : 0.15;
         root.traverse((child) => {
             if (child.isMesh && child.material) {
                 const mats = Array.isArray(child.material) ? child.material : [child.material];
@@ -392,23 +392,32 @@ export const ZZZHybridToonShader = {
                     const matName = String(mat.name || child.name || '').toLowerCase();
                     const isSkinOrFace = matName.includes('skin') || matName.includes('face') || matName.includes('body') || matName.includes('肌') || matName.includes('顔');
                     const isMetalOrLeather = matName.includes('metal') || matName.includes('leather') || matName.includes('cloth') || matName.includes('jacket') || matName.includes('weapon');
+                    if (mat.emissive) {
+                        mat.emissive.setHex(0x000000);
+                        if ('emissiveIntensity' in mat) {
+                            mat.emissiveIntensity = 0.0;
+                        }
+                    }
                     if (isZZZ) {
                         if (isSkinOrFace) {
-                            mat.roughness = 0.85;
-                            mat.metalness = 0.01;
-                            if (mat.emissive) mat.emissive.setRGB(0.032, 0.020, 0.018);
+                            mat.roughness = 0.75;
+                            mat.metalness = 0.0;
                         } else if (isMetalOrLeather) {
-                            mat.roughness = 0.20;
-                            mat.metalness = 0.38;
-                            if (mat.emissive) mat.emissive.setRGB(0.018, 0.022, 0.030);
+                            mat.roughness = 0.25;
+                            mat.metalness = 0.20;
                         } else {
-                            mat.roughness = 0.26;
-                            mat.metalness = 0.14;
+                            mat.roughness = 0.35;
+                            mat.metalness = 0.05;
                         }
                     } else if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
                         mat.roughness = Math.max(0.65, mat.roughness);
                         mat.metalness = Math.min(0.08, mat.metalness);
                     }
+                    const hasAlpha = Boolean(mat.transparent && (mat.opacity < 0.98 || mat.alphaTest > 0.0));
+                    mat.transparent = hasAlpha;
+                    mat.alphaTest = 0.05;
+                    mat.opacity = hasAlpha ? mat.opacity : 1.0;
+                    mat.depthWrite = true;
                 });
             }
         });
@@ -713,7 +722,7 @@ function animate() {
                 currentAvatarAdapter.setExpression('aa', currentMouthRatio);
             }
         }
-        if (currentVrm.scene) {
+        if (currentVrm && currentVrm.scene) {
             const baseRot = Math.PI;
             const rotOffset = (currentVrm && currentVrm.isMmd) ? -Math.PI : 0.0;
             const yaw = currentVrm.isMmd ? 0.0 : motionMatching.facingYaw;
@@ -725,6 +734,9 @@ function animate() {
             currentExternalMesh.rotation.z = 0.0;
             currentExternalMesh.rotation.x = 0.0;
         }
+        scene.rotation.x = 0.0;
+        scene.rotation.z = 0.0;
+        camera.rotation.z = 0.0;
     }
     renderer.render(scene, camera);
 }

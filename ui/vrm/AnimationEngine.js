@@ -632,8 +632,10 @@ export class AnimationEngine {
     this.targetInertiaLeanX = THREE.MathUtils.damp(this.targetInertiaLeanX, 0.0, 5.0, dt);
 
     if (spine) {
-      spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, breath * 0.022 + deepBreath + extraSpinePitch + this.inertiaLeanX, 6.0, dt);
-      spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, noiseSpine + contrappostoRoll * 0.5, 4.0, dt);
+      const targetSpineX = THREE.MathUtils.clamp(breath * 0.022 + deepBreath + extraSpinePitch + this.inertiaLeanX, -0.08, 0.08);
+      const targetSpineZ = THREE.MathUtils.clamp(noiseSpine + contrappostoRoll * 0.5, -0.06, 0.06);
+      spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, targetSpineX, 6.0, dt);
+      spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, targetSpineZ, 4.0, dt);
       spine.rotation.y = THREE.MathUtils.damp(spine.rotation.y, Math.sin(this.idleTime * 0.5) * 0.015, 3.5, dt);
     }
     if (chest) {

@@ -419,18 +419,25 @@ export class MMDAvatar extends BaseAvatar {
         mats.forEach((mat) => {
           mat.side = THREE.DoubleSide;
           if (mat.map) {
-            if (mat.color) mat.color.setRGB(1.0, 1.0, 1.0);
+            mat.map.anisotropy = 16;
           } else {
             if (!mat.color) mat.color = new THREE.Color(0xf5e6dc);
           }
           if (mat.emissive) {
-            mat.emissive.setRGB(0.018, 0.015, 0.012);
+            mat.emissive.setHex(0x000000);
+            if ('emissiveIntensity' in mat) {
+              mat.emissiveIntensity = 0.0;
+            }
           }
-          mat.shininess = Math.min(6.0, mat.shininess || 6.0);
-          mat.roughness = this.profileType === 'ZZZAvatarProfile' ? 0.35 : 0.42;
-          mat.metalness = this.profileType === 'ZZZAvatarProfile' ? 0.08 : 0.02;
-          mat.depthWrite = true;
+          mat.shininess = Math.min(2.0, mat.shininess || 2.0);
+          mat.roughness = 0.55;
+          mat.metalness = 0.0;
+          const hasAlpha = Boolean(mat.transparent && (mat.opacity < 0.98 || mat.alphaTest > 0.0));
+          mat.transparent = hasAlpha;
           mat.alphaTest = 0.05;
+          mat.opacity = hasAlpha ? mat.opacity : 1.0;
+          mat.depthWrite = true;
+          mat.wireframe = false;
         });
       }
     });

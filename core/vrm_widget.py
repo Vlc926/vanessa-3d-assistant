@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 import threading
 import http.server
 import socketserver
@@ -36,8 +37,8 @@ class ThreadedHTTPServer:
                 super().end_headers()
 
             def translate_path(self, path):
-                norm = path.split("?", 1)[0].split("#", 1)[0]
-                norm = norm.replace("\\", "/")
+                raw = path.split("?", 1)[0].split("#", 1)[0]
+                norm = urllib.parse.unquote(raw).replace("\\", "/")
                 resolved = super().translate_path(norm)
                 if os.path.exists(resolved):
                     return resolved
@@ -60,6 +61,13 @@ class ThreadedHTTPServer:
                             if entry.lower() == part_lower:
                                 matched = entry
                                 break
+                        if not matched and "." in part:
+                            p_stem, _ = os.path.splitext(part_lower)
+                            for entry in os.listdir(curr):
+                                e_stem, e_ext = os.path.splitext(entry.lower())
+                                if e_stem == p_stem and e_ext in ('.png', '.tga', '.sph', '.spa', '.bmp', '.jpg', '.jpeg', '.webp'):
+                                    matched = entry
+                                    break
                     except Exception:
                         pass
                     if matched:

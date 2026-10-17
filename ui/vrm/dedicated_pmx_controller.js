@@ -420,21 +420,24 @@ export class DedicatedPMXController {
                             mat.map.minFilter = THREE.LinearMipmapLinearFilter;
                             mat.map.magFilter = THREE.LinearFilter;
                         }
-                        if (mat.color) {
-                            mat.color.setRGB(1.0, 1.0, 1.0);
-                        }
                     } else {
                         if (!mat.color) {
                             mat.color = new THREE.Color(0xf5e6dc);
                         }
                     }
                     if (mat.emissive) {
-                        mat.emissive.setRGB(0.015, 0.012, 0.010);
+                        mat.emissive.setHex(0x000000);
+                        if ('emissiveIntensity' in mat) {
+                            mat.emissiveIntensity = 0.0;
+                        }
                     }
-                    mat.shininess = Math.min(5.0, mat.shininess || 5.0);
-                    mat.roughness = 0.35;
-                    mat.metalness = 0.02;
+                    mat.shininess = Math.min(2.0, mat.shininess || 2.0);
+                    mat.roughness = 0.55;
+                    mat.metalness = 0.0;
+                    const hasAlpha = Boolean(mat.transparent && (mat.opacity < 0.98 || mat.alphaTest > 0.0));
+                    mat.transparent = hasAlpha;
                     mat.alphaTest = 0.05;
+                    mat.opacity = hasAlpha ? mat.opacity : 1.0;
                     mat.depthWrite = true;
                     mat.wireframe = false;
                 });
@@ -769,9 +772,11 @@ export class DedicatedPMXController {
 
         if (spine) {
             const walkSpineTurn = -walkSway * 0.035 * wW;
-            spine.rotation.x = THREE.MathUtils.lerp(spine.rotation.x, breath * 0.024 + spineLean + this.inertiaLeanX, 0.15);
+            const targetSpineX = THREE.MathUtils.clamp(breath * 0.024 + spineLean + this.inertiaLeanX, -0.08, 0.08);
+            const targetSpineZ = THREE.MathUtils.clamp(-swaySlow * (sAmp * 0.6), -0.06, 0.06);
+            spine.rotation.x = THREE.MathUtils.lerp(spine.rotation.x, targetSpineX, 0.15);
             spine.rotation.y = THREE.MathUtils.lerp(spine.rotation.y, sway * sAmp + walkSpineTurn, 0.10);
-            spine.rotation.z = THREE.MathUtils.lerp(spine.rotation.z, -swaySlow * (sAmp * 0.6), 0.10);
+            spine.rotation.z = THREE.MathUtils.lerp(spine.rotation.z, targetSpineZ, 0.10);
         }
         if (chest) {
             chest.rotation.x = THREE.MathUtils.lerp(chest.rotation.x, breath * 0.035 + chestLean + this.inertiaLeanX * 0.5, 0.15);
@@ -989,6 +994,14 @@ export class DedicatedPMXController {
             if (vrm.expressionManager) {
                 vrm.expressionManager.setValue('blink', blinkVal);
             }
+        }
+        if (this.mesh) {
+            this.mesh.rotation.x = 0.0;
+            this.mesh.rotation.z = 0.0;
+        }
+        if (vrm && vrm.scene) {
+            vrm.scene.rotation.x = 0.0;
+            vrm.scene.rotation.z = 0.0;
         }
     }
 }
