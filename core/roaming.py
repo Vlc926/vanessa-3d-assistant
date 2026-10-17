@@ -35,9 +35,30 @@ class RoamingController(QObject):
         duration_ms: Optional[int] = None,
         mode: str = "auto",
         comment: Optional[str] = None,
-        on_arrived: Optional[Callable[[], None]] = None
+        on_arrived: Optional[Callable[[], None]] = None,
+        urgency: float = 0.2,
+        tone: str = "calm"
     ):
         ov = self.overlay
+
+        if hasattr(ov, "screen_interact") and getattr(ov.screen_interact, "is_currently_perched", False):
+            ov.screen_interact.is_currently_perched = False
+            ov.screen_interact.current_perched_window = None
+            if hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "set_perched"):
+                ov.vrm_widget.set_perched(False)
+        elif hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "set_perched"):
+            ov.vrm_widget.set_perched(False)
+
+        if hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "set_physical_state"):
+            ov.vrm_widget.set_physical_state("GROUNDED")
+
+        if mode in ("urgent", "media", "action", "button"):
+            urgency = max(urgency, 0.85)
+            tone = "urgent"
+        elif mode in ("immediate", "teleport"):
+            urgency = 1.0
+            tone = "immediate"
+
         screens = QApplication.screens()
         screen_geom = screens[0].geometry() if screens else QRect(0, 0, 1920, 1200)
         sw = screen_geom.width()
@@ -54,38 +75,18 @@ class RoamingController(QObject):
         self.roam_on_arrived = on_arrived
 
         dist = math.hypot(target_x - self.roam_start.x(), target_y - self.roam_start.y())
-        urgency = 0.85 if mode in ("urgent", "media", "action", "button") else 0.35
-        route = SmartLocomotionRouter.evaluate_route(dist, urgency=urgency, tone=mode)
-        self.last_route = route
+        is_urgent = (urgency >= 0.6) or (tone in ("urgent", "immediate"))
+        needs_teleport = (is_urgent or dist >= 650.0) and (duration_ms is None)
 
-        if route.get("mode") == "TELEPORT_TRANSITION" and duration_ms is None:
+        if needs_teleport:
             self._execute_teleport_transition(target_x, target_y)
             return
 
-        speed_px_per_sec = 180.0
+        speed_px_per_sec = 160.0
         if duration_ms is None or duration_ms <= 0:
-            if mode in ("urgent", "media", "action", "button"):
-                speed_px_per_sec = 230.0
-                duration_ms = max(900, min(3600, int((dist / speed_px_per_sec) * 1000)))
-            elif mode in ("curious", "inspect", "curiosity", "point"):
-                speed_px_per_sec = 170.0
-                duration_ms = max(1100, min(4200, int((dist / speed_px_per_sec) * 1000)))
-            elif mode in ("careful", "select", "highlight", "text"):
-                speed_px_per_sec = 145.0
-                duration_ms = max(1200, min(4500, int((dist / speed_px_per_sec) * 1000)))
-            elif mode in ("stroll", "leisure", "idle_walk"):
-                speed_px_per_sec = 125.0
-                duration_ms = max(1400, min(5000, int((dist / speed_px_per_sec) * 1000)))
-            else:
-                if dist > 700:
-                    speed_px_per_sec = 210.0
-                elif dist > 300:
-                    speed_px_per_sec = 175.0
-                else:
-                    speed_px_per_sec = 140.0
-                duration_ms = max(1000, min(4000, int((dist / speed_px_per_sec) * 1000)))
+            duration_ms = max(800, min(4500, int((dist / speed_px_per_sec) * 1000)))
         else:
-            speed_px_per_sec = max(100.0, (dist / max(1, duration_ms)) * 1000.0)
+            speed_px_per_sec = max(90.0, (dist / max(1, duration_ms)) * 1000.0)
 
         interval_ms = 33
         self.roam_steps_total = max(15, duration_ms // interval_ms)
@@ -93,12 +94,13 @@ class RoamingController(QObject):
         self.is_roaming = True
         self.foot_lock.plant_foot([0.0, 0.0, 0.0], [float(self.roam_start.x()) / 1000.0, 0.0, 0.0])
 
-        if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
-            dx = 1 if target_x >= self.roam_start.x() else -1
-            ov.vrm_widget.set_body_facing(dx * 0.40, turn_speed=4.0)
-            speed_ratio = max(0.8, min(1.3, speed_px_per_sec / 160.0))
-            intent_cmd = "jog" if route.get("sub_mode") == "JOG" else "walk"
-            ov.vrm_widget.send_motor_intent(intent_cmd, vx=float(dx), vy=0.0, speed=speed_ratio, mood="happy", posture="locomotion")
+        dx = 1 if target_x >= self.roam_start.x() else -1
+        if hasattr(ov, "vrm_widget"):
+            if hasattr(ov.vrm_widget, "set_body_facing"):
+                ov.vrm_widget.set_body_facing(dx * 0.35, turn_speed=4.0)
+            if hasattr(ov.vrm_widget, "send_motor_intent"):
+                speed_ratio = max(0.8, min(1.3, speed_px_per_sec / 160.0))
+                ov.vrm_widget.send_motor_intent("walk", vx=float(dx), vy=0.0, speed=speed_ratio, mood="happy", posture="locomotion")
 
         if getattr(ov, "using_live2d", True) and hasattr(ov, "live2d_widget"):
             ov.live2d_widget.start_motion("TapBody")
@@ -112,19 +114,28 @@ class RoamingController(QObject):
         self.is_roaming = True
         ov.anim_state = "walking"
         ov.wake_up()
-        if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
-            ov.vrm_widget.set_physical_state("GROUNDED", landing_compression=0.85)
-            ov.vrm_widget.play_gesture("surprise")
+        if hasattr(ov, "vrm_widget"):
+            if hasattr(ov.vrm_widget, "set_physical_state"):
+                ov.vrm_widget.set_physical_state("FREE_FALL", vy=-280.0)
+            if hasattr(ov.vrm_widget, "apply_external_physics_impulse"):
+                ov.vrm_widget.apply_external_physics_impulse(0.0, -18.0, 0.016)
 
-        def _do_cut():
+        def _do_jump():
             ov.move(target_x, target_y)
             ov.sync_hyprland_position(target_x, target_y)
             ov.anchor_bottom_right = QPoint(target_x + ov.width(), target_y + ov.height())
-            if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
-                ov.vrm_widget.set_physical_state("GROUNDED", landing_compression=0.95)
-                ov.vrm_widget.send_motor_intent("idle", vx=0.0, vy=0.0, speed=0.0, mood="happy", posture="standby")
+            if hasattr(ov, "vrm_widget"):
+                if hasattr(ov.vrm_widget, "set_physical_state"):
+                    ov.vrm_widget.set_physical_state("GROUNDED", landing_compression=1.25)
+                if hasattr(ov.vrm_widget, "sync_locomotion_step"):
+                    ov.vrm_widget.sync_locomotion_step(40.0, 0.0, 0.3)
 
-        def _do_follow_through():
+        def _do_settle():
+            if hasattr(ov, "vrm_widget"):
+                if hasattr(ov.vrm_widget, "sync_locomotion_step"):
+                    ov.vrm_widget.sync_locomotion_step(0.0, 0.0, 0.0)
+                if hasattr(ov.vrm_widget, "send_motor_intent"):
+                    ov.vrm_widget.send_motor_intent("idle", vx=0.0, vy=0.0, speed=0.0, mood="happy", posture="standby")
             self.is_roaming = False
             ov.anim_state = "idle"
             if self.roam_final_comment:
@@ -134,8 +145,8 @@ class RoamingController(QObject):
             if callable(cb):
                 cb()
 
-        QTimer.singleShot(80, _do_cut)
-        QTimer.singleShot(200, _do_follow_through)
+        QTimer.singleShot(120, _do_jump)
+        QTimer.singleShot(300, _do_settle)
 
     def _step_roam(self):
         ov = self.overlay
@@ -160,7 +171,7 @@ class RoamingController(QObject):
         ov.sync_hyprland_position(cur_x, cur_y)
         ov.anchor_bottom_right = QPoint(cur_x + ov.width(), cur_y + ov.height())
 
-        if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "sync_locomotion_step"):
+        if hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "sync_locomotion_step"):
             vx_px = step_dx / 0.033
             vy_px = step_dy / 0.033
             ov.vrm_widget.sync_locomotion_step(vx_px, vy_px, self.stride_phase)
@@ -173,12 +184,15 @@ class RoamingController(QObject):
             ov.sync_hyprland_position(self.roam_target.x(), self.roam_target.y())
             ov.anchor_bottom_right = QPoint(self.roam_target.x() + ov.width(), self.roam_target.y() + ov.height())
 
-            if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
+            if hasattr(ov, "vrm_widget"):
                 if hasattr(ov.vrm_widget, "sync_locomotion_step"):
                     ov.vrm_widget.sync_locomotion_step(0.0, 0.0, self.stride_phase)
-                ov.vrm_widget.send_motor_intent("idle", vx=0.0, vy=0.0, speed=0.0, mood="relaxed", posture="standby")
-                QTimer.singleShot(180, lambda: ov.vrm_widget.set_body_facing(0.0, turn_speed=2.6))
-                ov.vrm_widget.look_at(0.0, 0.0)
+                if hasattr(ov.vrm_widget, "send_motor_intent"):
+                    ov.vrm_widget.send_motor_intent("idle", vx=0.0, vy=0.0, speed=0.0, mood="relaxed", posture="standby")
+                if hasattr(ov.vrm_widget, "set_body_facing"):
+                    QTimer.singleShot(180, lambda: ov.vrm_widget.set_body_facing(0.0, turn_speed=2.6))
+                if hasattr(ov.vrm_widget, "look_at"):
+                    ov.vrm_widget.look_at(0.0, 0.0)
 
             if self.roam_final_comment:
                 ov.show_balloon(self.roam_final_comment, duration_ms=4000)

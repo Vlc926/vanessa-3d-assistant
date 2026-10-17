@@ -245,6 +245,7 @@ export class DedicatedPMXController {
         this.inertiaLeanX = 0.0;
         this.targetInertiaLeanZ = 0.0;
         this.targetInertiaLeanX = 0.0;
+        this.walkVx = 0.0;
     }
 
     applyExternalImpulse(dx, dy, dt = 0.016) {
@@ -262,9 +263,11 @@ export class DedicatedPMXController {
 
     stopWalking() {
         this.isWalking = false;
+        this.walkVx = 0.0;
     }
 
     syncLocomotionStep(vx = 0.0, vy = 0.0, stridePhase = 0.0) {
+        this.walkVx = Number(vx) || 0.0;
         const speed = Math.hypot(vx, vy);
         if (speed > 1.5) {
             this.isWalking = true;
@@ -789,34 +792,39 @@ export class DedicatedPMXController {
         this.targetInertiaLeanZ = THREE.MathUtils.damp(this.targetInertiaLeanZ, 0.0, 5.0, dt);
         this.targetInertiaLeanX = THREE.MathUtils.damp(this.targetInertiaLeanX, 0.0, 5.0, dt);
 
+        const dirX = Math.sign(this.walkVx || 0.0);
+        const facingTarget = dirX !== 0 ? dirX * 0.35 : 0.0;
+
         if (hips) {
             if (this.initialHipsY === null) {
                 this.initialHipsY = hips.position.y;
             }
-            const targetHipsY = this.initialHipsY - (walkBounce * 0.032 * wW);
+            const targetHipsY = this.initialHipsY - (walkBounce * 0.025 * wW);
             hips.position.y = THREE.MathUtils.lerp(hips.position.y, targetHipsY, 0.25);
             const targetHipsZ = walkSway * 0.012 * wW;
             hips.rotation.z = THREE.MathUtils.lerp(hips.rotation.z, targetHipsZ, 0.20);
-            hips.rotation.y = THREE.MathUtils.lerp(hips.rotation.y, walkSway * 0.035 * wW, 0.20);
+            const targetHipsYRot = facingTarget * wW + (walkSway * 0.035 * wW);
+            hips.rotation.y = THREE.MathUtils.lerp(hips.rotation.y, targetHipsYRot, 0.20);
         }
 
+        const kneeL = Math.max(0.0, -Math.cos(this.walkPhase)) * 0.65;
+        const kneeR = Math.max(0.0, Math.cos(this.walkPhase)) * 0.65;
+
         if (lUpperLeg) {
-            const targetPitch = walkStride * 0.42 * wW;
+            const targetPitch = walkStride * 0.45 * wW;
             lUpperLeg.rotation.x = THREE.MathUtils.lerp(lUpperLeg.rotation.x, targetPitch, 0.25);
             lUpperLeg.rotation.z = THREE.MathUtils.lerp(lUpperLeg.rotation.z, -0.02, 0.15);
         }
         if (rUpperLeg) {
-            const targetPitch = -walkStride * 0.42 * wW;
+            const targetPitch = -walkStride * 0.45 * wW;
             rUpperLeg.rotation.x = THREE.MathUtils.lerp(rUpperLeg.rotation.x, targetPitch, 0.25);
             rUpperLeg.rotation.z = THREE.MathUtils.lerp(rUpperLeg.rotation.z, 0.02, 0.15);
         }
         if (lLowerLeg) {
-            const kneeFlex = Math.max(0.0, -walkStride) * 0.58 * wW;
-            lLowerLeg.rotation.x = THREE.MathUtils.lerp(lLowerLeg.rotation.x, kneeFlex, 0.25);
+            lLowerLeg.rotation.x = THREE.MathUtils.lerp(lLowerLeg.rotation.x, kneeL * wW, 0.25);
         }
         if (rLowerLeg) {
-            const kneeFlex = Math.max(0.0, walkStride) * 0.58 * wW;
-            rLowerLeg.rotation.x = THREE.MathUtils.lerp(rLowerLeg.rotation.x, kneeFlex, 0.25);
+            rLowerLeg.rotation.x = THREE.MathUtils.lerp(rLowerLeg.rotation.x, kneeR * wW, 0.25);
         }
         if (lFoot) {
             const footPitch = walkStride * 0.20 * wW;
@@ -892,7 +900,7 @@ export class DedicatedPMXController {
                 }
             }
             const armSway = Math.sin(this.idleTime * (sSpeed * 1.1)) * (sAmp * 1.2);
-            const walkArmSwing = -walkStride * 0.35 * wW * (1.0 - gestWeight);
+            const walkArmSwing = -walkStride * 0.30 * wW * (1.0 - gestWeight);
             lArm.rotation.set(armPoseX + armSway + walkArmSwing, armPoseY + sway * 0.015, armPoseZ + armSway * 0.6);
         }
 
@@ -913,10 +921,10 @@ export class DedicatedPMXController {
                 armPoseZ -= 0.55 * gestWeight;
             } else if (this.activeGesture === 'doubt') {
                 armPoseX += 0.30 * gestWeight;
-                armPoseZ -= 0.35 * gestWeight;
+                armPoseZ += 0.35 * gestWeight;
             } else if (this.activeGesture === 'shock') {
                 armPoseX -= 0.30 * gestWeight;
-                armPoseZ += 0.25 * gestWeight;
+                armPoseZ -= 0.25 * gestWeight;
             } else if (this.activeGesture === 'smug') {
                 armPoseX += 0.25 * gestWeight;
                 armPoseZ -= 0.30 * gestWeight;
@@ -932,7 +940,7 @@ export class DedicatedPMXController {
             } else if (this.activeGesture === 'characteristic') {
                 if (this.activeProfileKey === 'inugami_korone') {
                     armPoseX += 0.35 * gestWeight;
-                    armPoseZ -= 0.45 * gestWeight;
+                    armPoseZ += 0.45 * gestWeight;
                 } else if (this.activeProfileKey === 'houshou_marine') {
                     armPoseX += 0.20 * gestWeight;
                     armPoseZ += 0.15 * gestWeight;
@@ -942,7 +950,7 @@ export class DedicatedPMXController {
                 }
             }
             const armSway = Math.sin(this.idleTime * (sSpeed * 1.1)) * (sAmp * 1.2);
-            const walkArmSwing = walkStride * 0.35 * wW * (1.0 - gestWeight);
+            const walkArmSwing = walkStride * 0.30 * wW * (1.0 - gestWeight);
             rArm.rotation.set(armPoseX + armSway + walkArmSwing, armPoseY - sway * 0.015, armPoseZ - armSway * 0.6);
         }
 

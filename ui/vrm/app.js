@@ -937,7 +937,7 @@ window.vrmController = {
     },
     syncLocomotionStep: (vx = 0.0, vy = 0.0, stridePhase = 0.0) => {
         footIkSolver.syncLocomotionStep(vx, vy, stridePhase);
-        animationEngine.syncLocomotionStep(vx, vy, stridePhase, 0, 0);
+        animationEngine.syncLocomotionStep(vx, vy, stridePhase);
         if (dedicatedPmxController && typeof dedicatedPmxController.syncLocomotionStep === 'function') {
             dedicatedPmxController.syncLocomotionStep(vx, vy, stridePhase);
         }

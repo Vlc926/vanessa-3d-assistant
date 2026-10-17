@@ -171,6 +171,8 @@ export class AnimationEngine {
     this.locomotionVy = 0.0;
     this.stridePhase = 0.0;
     this.isWindowMoving = false;
+    this.walkWeight = 0.0;
+    this.initialHipsY = null;
     this.teleportPhaseTimer = 0.0;
     this.teleportMode = null;
 
@@ -307,13 +309,37 @@ export class AnimationEngine {
     }
   }
 
-  syncLocomotionStep(x, y, vx, vy, stridePhase) {
-    this.locomotionVx = Number(vx) || 0.0;
-    this.locomotionVy = Number(vy) || 0.0;
-    this.locomotionSpeedPx = Math.hypot(this.locomotionVx, this.locomotionVy);
+  startWalking(speed = 1.0) {
+    this.isWindowMoving = true;
+    this.locomotionSpeedPx = Math.max(20.0, Number(speed || 1.0) * 160.0);
+  }
+
+  stopWalking() {
+    this.isWindowMoving = false;
+    this.locomotionVx = 0.0;
+    this.locomotionVy = 0.0;
+    this.locomotionSpeedPx = 0.0;
+  }
+
+  syncLocomotionStep(arg1 = 0.0, arg2 = 0.0, arg3 = 0.0, arg4, arg5) {
+    let vx = 0.0;
+    let vy = 0.0;
+    let phase = 0.0;
+    if (arg4 !== undefined || arg5 !== undefined) {
+      vx = Number(arg3) || 0.0;
+      vy = Number(arg4) || 0.0;
+      phase = arg5 !== undefined ? Number(arg5) : Number(arg3);
+    } else {
+      vx = Number(arg1) || 0.0;
+      vy = Number(arg2) || 0.0;
+      phase = Number(arg3) || 0.0;
+    }
+    this.locomotionVx = vx;
+    this.locomotionVy = vy;
+    this.locomotionSpeedPx = Math.hypot(vx, vy);
     this.isWindowMoving = this.locomotionSpeedPx > 1.5;
-    if (stridePhase !== undefined && stridePhase !== null) {
-      this.stridePhase = Number(stridePhase);
+    if (!isNaN(phase) && phase !== null) {
+      this.stridePhase = phase;
     }
   }
 
@@ -574,20 +600,46 @@ export class AnimationEngine {
     }
 
     if (this.isWindowMoving) {
+      this.walkWeight = Math.min(1.0, this.walkWeight + dt * 6.0);
+    } else {
+      this.walkWeight = Math.max(0.0, this.walkWeight - dt * 4.0);
+    }
+
+    if (this.walkWeight > 0.001) {
       const speedRatio = Math.min(2.2, Math.max(0.6, this.locomotionSpeedPx / 160.0));
       this.stridePhase += dt * 5.6 * speedRatio;
-      const stride = Math.sin(this.stridePhase);
-      const oppStride = Math.sin(this.stridePhase + Math.PI);
+      const phase = this.stridePhase;
+      const wW = this.walkWeight;
+      const stride = Math.sin(phase);
+      const kneeL = Math.max(0.0, -Math.cos(phase)) * 0.65;
+      const kneeR = Math.max(0.0, Math.cos(phase)) * 0.65;
+      const dirX = Math.sign(this.locomotionVx || 0.0);
+      const facingTarget = dirX !== 0 ? dirX * 0.35 : 0.0;
 
-      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, stride * 0.46, 14.0, dt);
-      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, oppStride * 0.46, 14.0, dt);
-      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, Math.max(0.05, -stride * 0.62), 14.0, dt);
-      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, Math.max(0.05, -oppStride * 0.62), 14.0, dt);
-      if (lFoot) lFoot.rotation.x = THREE.MathUtils.damp(lFoot.rotation.x, stride * 0.22, 14.0, dt);
-      if (rFoot) rFoot.rotation.x = THREE.MathUtils.damp(rFoot.rotation.x, oppStride * 0.22, 14.0, dt);
-      if (lArm) lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, oppStride * 0.32, 12.0, dt);
-      if (rArm) rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, stride * 0.32, 12.0, dt);
-      if (hips) hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, stride * 0.06, 12.0, dt);
+      if (hips) {
+        if (this.initialHipsY === undefined || this.initialHipsY === null) {
+          this.initialHipsY = hips.position.y;
+        }
+        const bobbing = Math.abs(Math.sin(phase * 2.0)) * 0.025 * wW;
+        hips.position.y = THREE.MathUtils.damp(hips.position.y, this.initialHipsY - bobbing, 12.0, dt);
+        hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, facingTarget * wW, 8.0, dt);
+        hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, Math.cos(phase) * 0.02 * wW, 10.0, dt);
+      }
+      if (spine) {
+        spine.rotation.y = THREE.MathUtils.damp(spine.rotation.y, -facingTarget * 0.3 * wW, 8.0, dt);
+      }
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, stride * 0.45 * wW, 14.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -stride * 0.45 * wW, 14.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, kneeL * wW, 14.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, kneeR * wW, 14.0, dt);
+      if (lFoot) lFoot.rotation.x = THREE.MathUtils.damp(lFoot.rotation.x, stride * 0.20 * wW, 14.0, dt);
+      if (rFoot) rFoot.rotation.x = THREE.MathUtils.damp(rFoot.rotation.x, -stride * 0.20 * wW, 14.0, dt);
+      if (lArm) lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, -stride * 0.30 * wW, 12.0, dt);
+      if (rArm) rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, stride * 0.30 * wW, 12.0, dt);
+    } else if (this.initialHipsY !== null && hips) {
+      hips.position.y = THREE.MathUtils.damp(hips.position.y, this.initialHipsY, 8.0, dt);
+      hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, 0.0, 8.0, dt);
+      hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, 0.0, 8.0, dt);
     }
   }
 
@@ -674,7 +726,7 @@ export class AnimationEngine {
       }
     }
 
-    if (!this.isWindowMoving && this.physicalState === 'GROUNDED') {
+    if (this.walkWeight <= 0.001 && !this.isWindowMoving && this.physicalState === 'GROUNDED') {
       if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -extraKneeFlex * 0.5, 5.0, dt);
       if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -extraKneeFlex * 0.5, 5.0, dt);
       if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, extraKneeFlex, 5.0, dt);
