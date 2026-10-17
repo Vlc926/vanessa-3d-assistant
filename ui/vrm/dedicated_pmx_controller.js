@@ -246,6 +246,37 @@ export class DedicatedPMXController {
         this.targetInertiaLeanZ = 0.0;
         this.targetInertiaLeanX = 0.0;
         this.walkVx = 0.0;
+        this.physicalState = 'GROUNDED';
+        this.freeFallVelocityY = 0.0;
+        this.landingTimer = 0.0;
+        this.landingDuration = 0.25;
+        this.landingCompressionScale = 0.85;
+        this.crouchDepth = 0.0;
+        this.tiptoeHeight = 0.0;
+        this.dragAirTime = 0.0;
+        this.perchStyle = 'none';
+    }
+
+    setPhysicalState(state, options = {}) {
+        const prev = this.physicalState;
+        this.physicalState = String(state || 'GROUNDED').toUpperCase();
+        if (this.physicalState === 'DRAGGED_SUSPENDED' || this.physicalState === 'DRAGGED_IN_AIR') {
+            this.dragAirTime = 0.0;
+        } else if (this.physicalState === 'FREE_FALL') {
+            this.freeFallVelocityY = Number(options.vy) || 250.0;
+        } else if (this.physicalState === 'GROUNDED' && prev === 'FREE_FALL') {
+            const comp = Math.max(0.35, Math.min(1.25, Number(options.landingCompression) || 0.85));
+            this.landingDuration = 0.25;
+            this.landingTimer = 0.25;
+            this.landingCompressionScale = comp;
+        } else if (this.physicalState === 'PERCHED') {
+            this.perchStyle = options.style || 'sit';
+        }
+    }
+
+    setVerticalPostureOffset(crouchDepth = 0.0, tiptoeHeight = 0.0) {
+        this.crouchDepth = Math.max(0.0, Math.min(0.35, Number(crouchDepth) || 0.0));
+        this.tiptoeHeight = Math.max(0.0, Math.min(0.20, Number(tiptoeHeight) || 0.0));
     }
 
     applyExternalImpulse(dx, dy, dt = 0.016) {
@@ -615,6 +646,58 @@ export class DedicatedPMXController {
         const rArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm') || vrm.humanoid.getRawBoneNode('rightUpperArm');
         const lForearm = vrm.humanoid.getNormalizedBoneNode('leftLowerArm') || vrm.humanoid.getRawBoneNode('leftLowerArm');
         const rForearm = vrm.humanoid.getNormalizedBoneNode('rightLowerArm') || vrm.humanoid.getRawBoneNode('rightLowerArm');
+
+        if (this.physicalState === 'DRAGGED_SUSPENDED' || this.physicalState === 'DRAGGED_IN_AIR') {
+            this.dragAirTime += dt;
+            const kick = Math.sin(this.dragAirTime * 5.0);
+            const kickAlt = Math.cos(this.dragAirTime * 5.0);
+            if (spine) spine.rotation.set(0.0, 0.0, 0.0);
+            if (chest) chest.rotation.set(0.0, 0.0, 0.0);
+            if (hips) hips.rotation.set(0.0, 0.0, 0.0);
+            if (lUpperLeg) lUpperLeg.rotation.x = -0.35 + kick * 0.28;
+            if (rUpperLeg) rUpperLeg.rotation.x = -0.35 - kick * 0.28;
+            if (lLowerLeg) lLowerLeg.rotation.x = 0.50 + Math.max(0, kickAlt) * 0.32;
+            if (rLowerLeg) rLowerLeg.rotation.x = 0.50 + Math.max(0, -kickAlt) * 0.32;
+            if (lArm) lArm.rotation.set(0.18, 0.08, -0.42);
+            if (rArm) rArm.rotation.set(0.18, -0.08, 0.42);
+            if (lForearm) lForearm.rotation.set(0.40, 0.0, 0.22);
+            if (rForearm) rForearm.rotation.set(0.40, 0.0, -0.22);
+            return;
+        }
+
+        if (this.physicalState === 'FREE_FALL') {
+            const fallSpeed = Math.abs(this.freeFallVelocityY || 250.0);
+            const windLift = Math.min(0.40, fallSpeed * 0.0004);
+            if (spine) spine.rotation.set(0.0, 0.0, 0.0);
+            if (lArm) lArm.rotation.set(-0.20, 0.0, -0.55 - windLift);
+            if (rArm) rArm.rotation.set(-0.20, 0.0, 0.55 + windLift);
+            if (lUpperLeg) lUpperLeg.rotation.x = -0.30;
+            if (rUpperLeg) rUpperLeg.rotation.x = -0.20;
+            if (lLowerLeg) lLowerLeg.rotation.x = 0.55;
+            if (rLowerLeg) rLowerLeg.rotation.x = 0.45;
+            return;
+        }
+
+        if (this.landingTimer > 0.0) {
+            this.landingTimer = Math.max(0.0, this.landingTimer - dt);
+            const progress = this.landingTimer / (this.landingDuration || 0.25);
+            const comp = Math.sin(progress * Math.PI) * (this.landingCompressionScale || 0.85);
+            if (spine) spine.rotation.x = 0.32 * comp;
+            if (lUpperLeg) lUpperLeg.rotation.x = -0.65 * comp;
+            if (rUpperLeg) rUpperLeg.rotation.x = -0.65 * comp;
+            if (lLowerLeg) lLowerLeg.rotation.x = 1.15 * comp;
+            if (rLowerLeg) rLowerLeg.rotation.x = 1.15 * comp;
+            return;
+        }
+
+        if (this.physicalState === 'PERCHED') {
+            const swing = Math.sin(this.idleTime * 2.4) * 0.22;
+            if (lUpperLeg) lUpperLeg.rotation.x = -1.35;
+            if (rUpperLeg) rUpperLeg.rotation.x = -1.35;
+            if (lLowerLeg) lLowerLeg.rotation.x = 1.25 + swing;
+            if (rLowerLeg) rLowerLeg.rotation.x = 1.25 - swing;
+            return;
+        }
 
         if (this.isWalking) {
             this.walkWeight = Math.min(1.0, this.walkWeight + dt * 4.0);

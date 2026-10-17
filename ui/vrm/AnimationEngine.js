@@ -179,10 +179,15 @@ export class AnimationEngine {
     this.dragAirTime = 0.0;
     this.freeFallVelocityY = 0.0;
     this.landingTimer = 0.0;
+    this.landingDuration = 0.25;
+    this.landingCompressionScale = 0.85;
     this.headpatActive = false;
+    this.headpatCursorX = 0.0;
     this.headpatTimer = 0.0;
     this.windowPanicActive = false;
     this.perchStyle = 'none';
+    this.crouchDepth = 0.0;
+    this.tiptoeHeight = 0.0;
 
     this.fullBodyArticulation = null;
     this.learnedBehaviors = [];
@@ -359,29 +364,38 @@ export class AnimationEngine {
   setPhysicalState(state, options = {}) {
     const prev = this.physicalState;
     this.physicalState = String(state || 'GROUNDED').toUpperCase();
-    if (this.physicalState === 'DRAGGED_IN_AIR') {
+    if (this.physicalState === 'DRAGGED_SUSPENDED' || this.physicalState === 'DRAGGED_IN_AIR') {
       this.dragAirTime = 0.0;
       this.torsoSpring.impulse(0.85);
     } else if (this.physicalState === 'FREE_FALL') {
       this.freeFallVelocityY = Number(options.vy) || 250.0;
     } else if (this.physicalState === 'GROUNDED' && prev === 'FREE_FALL') {
-      this.landingTimer = 0.42;
-      this.torsoSpring.impulse(-1.65);
-      this.hipsSpring.impulse(-1.80);
-      this.limbsSpring.impulse(-1.20);
+      const comp = Math.max(0.35, Math.min(1.25, Number(options.landingCompression) || 0.85));
+      this.landingDuration = 0.25;
+      this.landingTimer = 0.25;
+      this.landingCompressionScale = comp;
+      this.torsoSpring.impulse(-1.65 * comp);
+      this.hipsSpring.impulse(-1.80 * comp);
+      this.limbsSpring.impulse(-1.20 * comp);
     } else if (this.physicalState === 'PERCHED') {
       this.perchStyle = options.style || 'sit';
     }
   }
 
-  triggerHeadpat(active = true) {
+  triggerHeadpat(active = true, cursorX = 0.0) {
     this.headpatActive = Boolean(active);
+    this.headpatCursorX = Number(cursorX) || 0.0;
     if (this.headpatActive) {
       this.headpatTimer = 2.8;
-      this.targetEmotion.joy = 0.92;
-      this.targetEmotion.shyness = 0.55;
+      this.targetEmotion.joy = 0.95;
+      this.targetEmotion.shyness = 0.60;
       this.torsoSpring.impulse(0.45);
     }
+  }
+
+  setVerticalPostureOffset(crouchDepth = 0.0, tiptoeHeight = 0.0) {
+    this.crouchDepth = Math.max(0.0, Math.min(0.35, Number(crouchDepth) || 0.0));
+    this.tiptoeHeight = Math.max(0.0, Math.min(0.20, Number(tiptoeHeight) || 0.0));
   }
 
   triggerWindowClosePanic(active = true) {
@@ -515,72 +529,91 @@ export class AnimationEngine {
     if (this.headpatActive) {
       this.headpatTimer -= dt;
       this.avatar.setExpression('blink', 0.95);
-      this.avatar.setExpression('joy', 0.90);
+      this.avatar.setExpression('joy', 0.92);
       const head = this.avatar.getBone('head');
       if (head) {
-        head.rotation.z = THREE.MathUtils.damp(head.rotation.z, Math.sin(this.idleTime * 6.0) * 0.14, 8.0, dt);
-        head.rotation.x = THREE.MathUtils.damp(head.rotation.x, 0.08, 8.0, dt);
+        const tiltZ = THREE.MathUtils.clamp(this.headpatCursorX * 0.18, -0.15, 0.15);
+        head.rotation.z = THREE.MathUtils.damp(head.rotation.z, tiltZ + Math.sin(this.idleTime * 6.0) * 0.05, 8.0, dt);
+        head.rotation.x = THREE.MathUtils.damp(head.rotation.x, 0.10, 8.0, dt);
       }
       if (this.headpatTimer <= 0.0) {
         this.headpatActive = false;
       }
     }
 
-    if (this.physicalState === 'DRAGGED_IN_AIR') {
+    if (this.physicalState === 'DRAGGED_SUSPENDED' || this.physicalState === 'DRAGGED_IN_AIR') {
       this.dragAirTime += dt;
-      const kick = Math.sin(this.dragAirTime * 5.5);
+      const kick = Math.sin(this.dragAirTime * 5.0);
+      const kickAlt = Math.cos(this.dragAirTime * 5.0);
       if (spine) {
-        spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, 0.0, 14.0, dt);
-        spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, 0.04, 10.0, dt);
+        spine.rotation.z = THREE.MathUtils.damp(spine.rotation.z, 0.0, 16.0, dt);
+        spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, 0.0, 16.0, dt);
       }
       if (chest) {
-        chest.rotation.z = THREE.MathUtils.damp(chest.rotation.z, 0.0, 14.0, dt);
-        chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, 0.02, 10.0, dt);
+        chest.rotation.z = THREE.MathUtils.damp(chest.rotation.z, 0.0, 16.0, dt);
+        chest.rotation.x = THREE.MathUtils.damp(chest.rotation.x, 0.0, 16.0, dt);
       }
       if (hips) {
-        hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, 0.0, 14.0, dt);
-        hips.rotation.x = THREE.MathUtils.damp(hips.rotation.x, 0.02, 10.0, dt);
+        hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, 0.0, 16.0, dt);
+        hips.rotation.x = THREE.MathUtils.damp(hips.rotation.x, 0.0, 16.0, dt);
       }
-      if (lShoulder) lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, 0.12, 10.0, dt);
-      if (rShoulder) rShoulder.rotation.z = THREE.MathUtils.damp(rShoulder.rotation.z, -0.12, 10.0, dt);
-      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.32 + kick * 0.22, 10.0, dt);
-      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.32 - kick * 0.22, 10.0, dt);
-      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.45 + Math.max(0, kick) * 0.25, 10.0, dt);
-      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.45 + Math.max(0, -kick) * 0.25, 10.0, dt);
+      if (lShoulder) lShoulder.rotation.z = THREE.MathUtils.damp(lShoulder.rotation.z, 0.20, 10.0, dt);
+      if (rShoulder) rShoulder.rotation.z = THREE.MathUtils.damp(rShoulder.rotation.z, -0.20, 10.0, dt);
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.35 + kick * 0.28, 12.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.35 - kick * 0.28, 12.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.50 + Math.max(0, kickAlt) * 0.32, 12.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.50 + Math.max(0, -kickAlt) * 0.32, 12.0, dt);
       if (lArm) {
-        lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, 0.25, 10.0, dt);
+        lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, 0.18, 10.0, dt);
+        lArm.rotation.y = THREE.MathUtils.damp(lArm.rotation.y, 0.08, 10.0, dt);
         lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.42, 10.0, dt);
       }
       if (rArm) {
-        rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, 0.25, 10.0, dt);
+        rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, 0.18, 10.0, dt);
+        rArm.rotation.y = THREE.MathUtils.damp(rArm.rotation.y, -0.08, 10.0, dt);
         rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.42, 10.0, dt);
       }
-      if (lForearm) lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.35, 10.0, dt);
-      if (rForearm) rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.35, 10.0, dt);
+      if (lForearm) {
+        lForearm.rotation.x = THREE.MathUtils.damp(lForearm.rotation.x, 0.40, 10.0, dt);
+        lForearm.rotation.z = THREE.MathUtils.damp(lForearm.rotation.z, 0.22, 10.0, dt);
+      }
+      if (rForearm) {
+        rForearm.rotation.x = THREE.MathUtils.damp(rForearm.rotation.x, 0.40, 10.0, dt);
+        rForearm.rotation.z = THREE.MathUtils.damp(rForearm.rotation.z, -0.22, 10.0, dt);
+      }
       this.avatar.setExpression('surprised', 0.85);
-      this.avatar.setExpression('shy', 0.75);
+      this.avatar.setExpression('shy', 0.70);
       return;
     }
 
     if (this.physicalState === 'FREE_FALL') {
-      if (lArm) lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.25, 10.0, dt);
-      if (rArm) rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.25, 10.0, dt);
-      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.25, 10.0, dt);
-      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.15, 10.0, dt);
-      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.45, 10.0, dt);
-      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.35, 10.0, dt);
+      const fallSpeed = Math.abs(this.freeFallVelocityY || 250.0);
+      const windLift = Math.min(0.40, fallSpeed * 0.0004);
+      if (lArm) {
+        lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, -0.20, 10.0, dt);
+        lArm.rotation.z = THREE.MathUtils.damp(lArm.rotation.z, -0.55 - windLift, 10.0, dt);
+      }
+      if (rArm) {
+        rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, -0.20, 10.0, dt);
+        rArm.rotation.z = THREE.MathUtils.damp(rArm.rotation.z, 0.55 + windLift, 10.0, dt);
+      }
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.30, 10.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.20, 10.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.55, 10.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.45, 10.0, dt);
       this.avatar.setExpression('surprised', 0.95);
       return;
     }
 
     if (this.landingTimer > 0.0) {
       this.landingTimer = Math.max(0.0, this.landingTimer - dt);
-      const comp = Math.sin((this.landingTimer / 0.42) * Math.PI);
-      if (spine) spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, 0.28 * comp, 14.0, dt);
-      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.55 * comp, 14.0, dt);
-      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.55 * comp, 14.0, dt);
-      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.95 * comp, 14.0, dt);
-      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.95 * comp, 14.0, dt);
+      const progress = this.landingTimer / (this.landingDuration || 0.25);
+      const comp = Math.sin(progress * Math.PI) * (this.landingCompressionScale || 0.85);
+      if (spine) spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, 0.32 * comp, 16.0, dt);
+      if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.65 * comp, 16.0, dt);
+      if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.65 * comp, 16.0, dt);
+      if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 1.15 * comp, 16.0, dt);
+      if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 1.15 * comp, 16.0, dt);
       return;
     }
 
@@ -637,7 +670,21 @@ export class AnimationEngine {
       if (lArm) lArm.rotation.x = THREE.MathUtils.damp(lArm.rotation.x, -stride * 0.30 * wW, 12.0, dt);
       if (rArm) rArm.rotation.x = THREE.MathUtils.damp(rArm.rotation.x, stride * 0.30 * wW, 12.0, dt);
     } else if (this.initialHipsY !== null && hips) {
-      hips.position.y = THREE.MathUtils.damp(hips.position.y, this.initialHipsY, 8.0, dt);
+      let targetHipsY = this.initialHipsY;
+      if (this.crouchDepth > 0.001) {
+        targetHipsY -= this.crouchDepth * 0.40;
+        if (spine) spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, 0.20 * this.crouchDepth, 10.0, dt);
+        if (lUpperLeg) lUpperLeg.rotation.x = THREE.MathUtils.damp(lUpperLeg.rotation.x, -0.35 * this.crouchDepth, 10.0, dt);
+        if (rUpperLeg) rUpperLeg.rotation.x = THREE.MathUtils.damp(rUpperLeg.rotation.x, -0.35 * this.crouchDepth, 10.0, dt);
+        if (lLowerLeg) lLowerLeg.rotation.x = THREE.MathUtils.damp(lLowerLeg.rotation.x, 0.65 * this.crouchDepth, 10.0, dt);
+        if (rLowerLeg) rLowerLeg.rotation.x = THREE.MathUtils.damp(rLowerLeg.rotation.x, 0.65 * this.crouchDepth, 10.0, dt);
+      } else if (this.tiptoeHeight > 0.001) {
+        targetHipsY += this.tiptoeHeight * 0.35;
+        if (spine) spine.rotation.x = THREE.MathUtils.damp(spine.rotation.x, -0.10 * this.tiptoeHeight, 10.0, dt);
+        if (lFoot) lFoot.rotation.x = THREE.MathUtils.damp(lFoot.rotation.x, 0.40 * this.tiptoeHeight, 10.0, dt);
+        if (rFoot) rFoot.rotation.x = THREE.MathUtils.damp(rFoot.rotation.x, 0.40 * this.tiptoeHeight, 10.0, dt);
+      }
+      hips.position.y = THREE.MathUtils.damp(hips.position.y, targetHipsY, 8.0, dt);
       hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, 0.0, 8.0, dt);
       hips.rotation.z = THREE.MathUtils.damp(hips.rotation.z, 0.0, 8.0, dt);
     }

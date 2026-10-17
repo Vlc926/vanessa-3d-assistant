@@ -31,20 +31,20 @@ class DesktopInertiaEngine(QObject):
         self.vy = 0.0
         ov = self.overlay
         if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "set_physical_state"):
-            ov.vrm_widget.set_physical_state("DRAGGED_IN_AIR")
+            ov.vrm_widget.set_physical_state("DRAGGED_SUSPENDED")
 
     def update_drag(self, x: float, y: float):
         now = time.time()
         dt = max(0.001, now - self.last_drag_time)
         dx = float(x) - self.last_drag_pos[0]
         dy = float(y) - self.last_drag_pos[1]
-        self.vx = (dx / dt) * 0.16
-        self.vy = (dy / dt) * 0.16
+        self.vx = dx / dt
+        self.vy = dy / dt
         self.last_drag_time = now
         self.last_drag_pos = (float(x), float(y))
         ov = self.overlay
         if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "set_physical_state"):
-            ov.vrm_widget.set_physical_state("DRAGGED_IN_AIR", vy=self.vy)
+            ov.vrm_widget.set_physical_state("DRAGGED_SUSPENDED", vy=dy)
 
     def _get_floor_y(self) -> float:
         ov = self.overlay
@@ -70,7 +70,7 @@ class DesktopInertiaEngine(QObject):
             ww = float(w.get("w", 0))
             if wx + 20.0 <= avatar_center_x <= wx + ww - 20.0:
                 perch_y = wy - ov.height() + overlap_offset
-                if prev_y <= perch_y + 18.0 and new_y >= perch_y - 8.0:
+                if prev_y <= perch_y + 24.0 and new_y >= perch_y - 10.0:
                     return {"window": w, "perch_y": perch_y}
         return None
 
@@ -82,7 +82,7 @@ class DesktopInertiaEngine(QObject):
             self.is_gliding = True
             ov = self.overlay
             if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "set_physical_state"):
-                ov.vrm_widget.set_physical_state("FREE_FALL", vy=max(80.0, self.vy * 60.0))
+                ov.vrm_widget.set_physical_state("FREE_FALL", vy=max(120.0, self.vy))
             self.glide_timer.start(16)
         elif speed > self.min_velocity:
             self.is_falling = False
@@ -107,11 +107,13 @@ class DesktopInertiaEngine(QObject):
         self.vy = 0.0
         ov = self.overlay
         if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "set_physical_state"):
+            comp = max(0.45, min(1.25, impact_speed / 420.0))
             if perched_style:
-                ov.vrm_widget.set_perched(True, perched_style)
-            elif landed:
-                comp = max(0.35, min(1.25, impact_speed / 28.0))
                 ov.vrm_widget.set_physical_state("GROUNDED", landing_compression=comp)
+                QTimer.singleShot(250, lambda: ov.vrm_widget.set_perched(True, perched_style))
+            elif landed:
+                ov.vrm_widget.set_physical_state("GROUNDED", landing_compression=comp)
+                QTimer.singleShot(250, lambda: ov.vrm_widget.set_physical_state("GROUNDED"))
             else:
                 ov.vrm_widget.set_physical_state("GROUNDED")
 
@@ -131,17 +133,21 @@ class DesktopInertiaEngine(QObject):
         cur_y = float(ov.y())
 
         if self.is_falling:
-            gravity_step = self.GRAVITY_M_S2 * self.PIXELS_PER_METER * (dt ** 2) * 3.2
-            self.vy += gravity_step
-            self.vx *= 0.96
+            gravity_accel = self.GRAVITY_M_S2 * self.PIXELS_PER_METER
+            self.vy += gravity_accel * dt
+            self.vx *= 0.95
+            disp_x = self.vx * dt
+            disp_y = self.vy * dt
             if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget") and hasattr(ov.vrm_widget, "set_physical_state"):
-                ov.vrm_widget.set_physical_state("FREE_FALL", vy=self.vy / dt)
+                ov.vrm_widget.set_physical_state("FREE_FALL", vy=self.vy)
         else:
             self.vx *= self.friction
             self.vy *= self.friction
+            disp_x = self.vx
+            disp_y = self.vy
 
-        new_x = cur_x + self.vx
-        new_y = cur_y + self.vy
+        new_x = cur_x + disp_x
+        new_y = cur_y + disp_y
 
         screens = QApplication.screens()
         if screens:

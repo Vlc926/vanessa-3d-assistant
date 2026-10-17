@@ -64,11 +64,31 @@ export class AnimeFXRenderer {
             ctx.arc(w * 0.5 - 20, h * 0.5 + 20, 24, Math.PI * 1.5, Math.PI * 2);
             ctx.stroke();
         });
+
+        this.sparkleTex = this._createCanvasTexture((ctx, w, h) => {
+            ctx.clearRect(0, 0, w, h);
+            const cx = w * 0.5;
+            const cy = h * 0.5;
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.45);
+            grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+            grad.addColorStop(0.35, 'rgba(254, 240, 138, 0.95)');
+            grad.addColorStop(0.75, 'rgba(250, 204, 21, 0.6)');
+            grad.addColorStop(1.0, 'rgba(234, 179, 8, 0.0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - h * 0.45);
+            ctx.quadraticCurveTo(cx, cy, cx + w * 0.45, cy);
+            ctx.quadraticCurveTo(cx, cy, cx, cy + h * 0.45);
+            ctx.quadraticCurveTo(cx, cy, cx - w * 0.45, cy);
+            ctx.quadraticCurveTo(cx, cy, cx, cy - h * 0.45);
+            ctx.fill();
+        });
     }
 
-    trigger(type) {
+    trigger(type, options = {}) {
         if (type === 'sweat') this.triggerSweatDrop();
         else if (type === 'anger') this.triggerAngerVein();
+        else if (type === 'sparkle' || type === 'sparkles') this.triggerSparkles(options.count || 7);
     }
 
     triggerSweatDrop() {
@@ -89,6 +109,35 @@ export class AnimeFXRenderer {
             this.fxGroup.add(this.angerSprite);
         }
         this.angerTimer = 3.0;
+    }
+
+    triggerSparkles(count = 7) {
+        let headPos = new THREE.Vector3(0, 1.4, 0);
+        if (this.vrm && this.vrm.humanoid) {
+            const head = this.vrm.humanoid.getNormalizedBoneNode('head') || this.vrm.humanoid.getRawBoneNode('head');
+            if (head) head.getWorldPosition(headPos);
+        }
+        for (let i = 0; i < count; i++) {
+            const mat = new THREE.SpriteMaterial({ map: this.sparkleTex, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending });
+            const sprite = new THREE.Sprite(mat);
+            const offsetX = (Math.random() - 0.5) * 0.38;
+            const offsetY = Math.random() * 0.25 + 0.05;
+            const offsetZ = (Math.random() - 0.5) * 0.25 + 0.10;
+            sprite.position.set(headPos.x + offsetX, headPos.y + offsetY, headPos.z + offsetZ);
+            const initScale = 0.10 + Math.random() * 0.08;
+            sprite.scale.set(initScale, initScale, 1.0);
+            sprite.userData = {
+                isSparkle: true,
+                age: 0.0,
+                life: 1.1 + Math.random() * 0.7,
+                baseScale: initScale,
+                velY: 0.12 + Math.random() * 0.14,
+                velX: (Math.random() - 0.5) * 0.08,
+                rotSpeed: (Math.random() - 0.5) * 4.0
+            };
+            this.fxGroup.add(sprite);
+            this.poofParticles.push(sprite);
+        }
     }
 
     triggerShockBurst() {
@@ -149,10 +198,20 @@ export class AnimeFXRenderer {
             const p = this.poofParticles[i];
             p.userData.age += dt;
             const progress = p.userData.age / p.userData.life;
-            p.position.addScaledVector(p.userData.vel, dt);
-            p.material.opacity = Math.max(0.0, 0.85 * (1.0 - progress));
-            const curScale = p.scale.x * (1.0 + dt * 2.0);
-            p.scale.set(curScale, curScale, 1.0);
+            if (p.userData.isSparkle) {
+                p.position.y += p.userData.velY * dt;
+                p.position.x += p.userData.velX * dt;
+                p.material.rotation += p.userData.rotSpeed * dt;
+                const pulse = 1.0 + Math.sin(p.userData.age * 9.0) * 0.25;
+                const sc = p.userData.baseScale * pulse * Math.sin(progress * Math.PI);
+                p.scale.set(sc, sc, 1.0);
+                p.material.opacity = Math.max(0.0, Math.sin(progress * Math.PI));
+            } else {
+                p.position.addScaledVector(p.userData.vel, dt);
+                p.material.opacity = Math.max(0.0, 0.85 * (1.0 - progress));
+                const curScale = p.scale.x * (1.0 + dt * 2.0);
+                p.scale.set(curScale, curScale, 1.0);
+            }
 
             if (p.userData.age >= p.userData.life) {
                 this.fxGroup.remove(p);

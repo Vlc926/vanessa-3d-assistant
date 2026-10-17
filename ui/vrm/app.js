@@ -951,6 +951,9 @@ window.vrmController = {
     setPhysicalState: (state, options = {}) => {
         notifyActivity('action');
         animationEngine.setPhysicalState(state, options);
+        if (dedicatedPmxController && typeof dedicatedPmxController.setPhysicalState === 'function') {
+            dedicatedPmxController.setPhysicalState(state, options);
+        }
         if (state === 'PERCHED') {
             const style = options.style || 'sit';
             footIkSolver.setPerched(true, style);
@@ -959,15 +962,17 @@ window.vrmController = {
             footIkSolver.setPerched(false);
             motionMatching.setPerched(false);
             const vy = Number(options.vy || 250.0);
-            springDynamicsTuner.applyExternalImpulse(0.0, -Math.abs(vy) * 0.05, 0.016);
+            springDynamicsTuner.applyExternalImpulse(0.0, -Math.abs(vy) * 0.06, 0.016);
             if (animationEngine && typeof animationEngine.applyExternalPhysicsImpulse === 'function') {
-                animationEngine.applyExternalPhysicsImpulse(0.0, -Math.abs(vy) * 0.04, 0.016);
+                animationEngine.applyExternalPhysicsImpulse(0.0, -Math.abs(vy) * 0.05, 0.016);
             }
-        } else if (state === 'DRAGGED_IN_AIR') {
+        } else if (state === 'DRAGGED_SUSPENDED' || state === 'DRAGGED_IN_AIR') {
             footIkSolver.setPerched(false);
             motionMatching.setPerched(false);
+            const vy = Number(options.vy || 0.0);
+            springDynamicsTuner.applyExternalImpulse(0.0, -Math.abs(vy) * 0.03 - 5.0, 0.016);
             if (animationEngine && typeof animationEngine.applyExternalPhysicsImpulse === 'function') {
-                animationEngine.applyExternalPhysicsImpulse(0.0, -10.0, 0.016);
+                animationEngine.applyExternalPhysicsImpulse(0.0, -Math.abs(vy) * 0.02 - 5.0, 0.016);
             }
         } else {
             footIkSolver.setPerched(false);
@@ -983,7 +988,7 @@ window.vrmController = {
         animationEngine.triggerHeadpat(active, cursorX);
         if (active) {
             animeFacialDriver.setAsymmetricPreset('relaxed', 0.95);
-            animeFxRenderer.trigger('sparkle', { duration: 1.5 });
+            animeFxRenderer.trigger('sparkle', { duration: 1.5, count: 7 });
         }
     },
     triggerWindowClosePanic: (active = true) => {
@@ -996,6 +1001,12 @@ window.vrmController = {
     },
     setVerticalPostureOffset: (crouchDepth = 0.0, tiptoeHeight = 0.0) => {
         footIkSolver.setVerticalPostureOffset(crouchDepth, tiptoeHeight);
+        if (animationEngine && typeof animationEngine.setVerticalPostureOffset === 'function') {
+            animationEngine.setVerticalPostureOffset(crouchDepth, tiptoeHeight);
+        }
+        if (dedicatedPmxController && typeof dedicatedPmxController.setVerticalPostureOffset === 'function') {
+            dedicatedPmxController.setVerticalPostureOffset(crouchDepth, tiptoeHeight);
+        }
     },
     switchArchitectureProfile: (profileName) => {
         if (currentAvatarAdapter && typeof currentAvatarAdapter.setProfile === 'function') {

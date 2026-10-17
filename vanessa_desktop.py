@@ -850,9 +850,12 @@ class VanessaDesktopOverlay(QWidget):
         elif act in ("sit", "sentarse", "descansar"):
             if hasattr(self, "screen_interact") and self.screen_interact:
                 self.screen_interact.perch_on_window_border(style="sit")
-            elif getattr(self, "using_vrm", False) and hasattr(self, "vrm_widget"):
-                self.vrm_widget.start_motion("sit")
-                self.vrm_widget.set_expression("relaxed", 0.8)
+            else:
+                screens = QApplication.screens()
+                sh = screens[0].geometry().height() if screens else 1080
+                overlap = int(self.height() * 0.18)
+                floor_y = sh - self.height() - 25 + overlap
+                self.smooth_roam_to(self.x(), floor_y, mode="relaxed", on_arrived=lambda: self.vrm_widget.set_perched(True, "sit") if getattr(self, "using_vrm", False) and hasattr(self, "vrm_widget") else None)
         elif act in ("rest", "sleep", "dormir"):
             if getattr(self, "using_vrm", False) and hasattr(self, "vrm_widget"):
                 self.vrm_widget.start_motion("sleep")
@@ -889,6 +892,9 @@ class VanessaDesktopOverlay(QWidget):
                 self.hypr_controller.push_window_with_inertia(addr, dx, dy)
             elif hasattr(self, "perception_daemon") and self.perception_daemon:
                 self.perception_daemon.actuator.push_window(addr, int(dx), int(dy))
+        elif act in ("shake_window", "sacudir_ventana"):
+            if hasattr(self, "screen_interact") and self.screen_interact:
+                self.screen_interact.shake_active_window()
         elif act in ("fling", "impulse", "empujon", "toss"):
             ix = float(extra.get("ix", 400.0))
             iy = float(extra.get("iy", -300.0))
@@ -948,6 +954,8 @@ class VanessaDesktopOverlay(QWidget):
         if hasattr(self, "skeletal_controller") and self.skeletal_controller:
             self.skeletal_controller.handle_haptic_interaction("head_pat")
         if getattr(self, "using_vrm", False) and hasattr(self, "vrm_widget"):
+            if hasattr(self.vrm_widget, "trigger_headpat"):
+                self.vrm_widget.trigger_headpat(True, 0.0)
             self.vrm_widget.set_emotion("happy")
             self.vrm_widget.start_motion("pat_head")
         cute_lines = [
@@ -1138,7 +1146,7 @@ class VanessaDesktopOverlay(QWidget):
             if hasattr(self, "physics_engine"):
                 self.physics_engine.start_drag(float(self.x()), float(self.y()))
             if hasattr(self, "vrm_widget") and self.vrm_widget and hasattr(self.vrm_widget, "set_physical_state"):
-                self.vrm_widget.set_physical_state("DRAGGED_IN_AIR")
+                self.vrm_widget.set_physical_state("DRAGGED_SUSPENDED")
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             self.next_animation_frame()
             event.accept()
@@ -1158,8 +1166,11 @@ class VanessaDesktopOverlay(QWidget):
             dy = float(clamped_y - self.y())
             if hasattr(self, "skeletal_controller") and self.skeletal_controller:
                 self.skeletal_controller.handle_haptic_interaction("drag_move", float(clamped_x), float(clamped_y), dx, dy)
-            if hasattr(self, "vrm_widget") and self.vrm_widget and hasattr(self.vrm_widget, "apply_external_physics_impulse"):
-                self.vrm_widget.apply_external_physics_impulse(dx, dy, 0.016)
+            if hasattr(self, "vrm_widget") and self.vrm_widget:
+                if hasattr(self.vrm_widget, "set_physical_state"):
+                    self.vrm_widget.set_physical_state("DRAGGED_SUSPENDED", vy=dy)
+                if hasattr(self.vrm_widget, "apply_external_physics_impulse"):
+                    self.vrm_widget.apply_external_physics_impulse(dx, dy, 0.016)
             self.move(clamped_x, clamped_y)
             self.sync_hyprland_position(clamped_x, clamped_y)
             self.anchor_bottom_right = QPoint(clamped_x + self.width(), clamped_y + self.height())
@@ -1175,11 +1186,13 @@ class VanessaDesktopOverlay(QWidget):
         if hasattr(self, "physics_engine"):
             calc_vx, calc_vy = self.physics_engine.release_drag(float(self.x()), float(self.y()))
         if hasattr(self, "vrm_widget") and self.vrm_widget and hasattr(self.vrm_widget, "set_physical_state"):
-            if abs(calc_vy) > 80.0 or abs(calc_vx) > 80.0:
+            if hasattr(self, "physics_engine") and self.physics_engine.is_falling:
+                pass
+            elif abs(calc_vy) > 80.0 or abs(calc_vx) > 80.0:
                 self.vrm_widget.set_physical_state("FREE_FALL", vy=calc_vy)
             else:
                 self.vrm_widget.set_physical_state("GROUNDED")
-        if math.hypot(calc_vx, calc_vy) < 75.0:
+        if math.hypot(calc_vx, calc_vy) < 75.0 and not (hasattr(self, "physics_engine") and self.physics_engine.is_falling):
             self.anim_state = "idle"
             self.sync_hyprland_position(self.x(), self.y())
             self.anchor_bottom_right = QPoint(self.x() + self.width(), self.y() + self.height())

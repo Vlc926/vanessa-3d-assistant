@@ -50,10 +50,30 @@ class ScreenInteractor(QObject):
             return
 
         self.current_perched_window = matched
+        wx = float(matched.get("x", 0))
+        wy = float(matched.get("y", 0))
+        ww = float(matched.get("w", 0))
+        overlap_offset = int(ov.height() * 0.22)
+        expected_y = wy - ov.height() + overlap_offset
+        avatar_center_x = float(ov.x()) + (ov.width() * 0.5)
+
+        if avatar_center_x < wx - 30.0 or avatar_center_x > wx + ww + 30.0 or abs(float(ov.y()) - expected_y) > 45.0:
+            self.is_currently_perched = False
+            self.current_perched_window = None
+            if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
+                ov.vrm_widget.set_reading_mode(False)
+                ov.vrm_widget.set_perched(False)
+                ov.vrm_widget.trigger_window_close_panic(False)
+            if hasattr(ov, "physics_engine") and ov.physics_engine:
+                ov.physics_engine.release_drag(float(ov.x()), float(ov.y()))
+            return
+
+        if abs(float(ov.y()) - expected_y) > 2.0:
+            ov.move(int(ov.x()), int(expected_y))
+            if hasattr(ov, "sync_hyprland_position"):
+                ov.sync_hyprland_position(int(ov.x()), int(expected_y))
+
         if cx is not None and cy is not None:
-            wx = float(matched.get("x", 0))
-            wy = float(matched.get("y", 0))
-            ww = float(matched.get("w", 0))
             close_btn_x = wx + ww - 24.0
             close_btn_y = wy + 18.0
             dist_to_close = math.hypot(cx - close_btn_x, cy - close_btn_y)
@@ -355,6 +375,11 @@ class ScreenInteractor(QObject):
         ov.wake_up()
         a = (action or "play_pause").lower()
 
+        screens = QApplication.screens()
+        geom = screens[0].geometry() if screens else QRect(0, 0, 1920, 1200)
+        sw = geom.width()
+        sh = geom.height()
+
         is_video = False
         if media_type == "video" or "video" in a or "youtube" in a:
             is_video = True
@@ -369,8 +394,33 @@ class ScreenInteractor(QObject):
         except Exception:
             pass
 
+        target_win = self.get_active_hyprland_window()
+        if not target_win:
+            all_w = self.get_hyprland_windows()
+            if all_w:
+                target_win = all_w[0]
+
+        if target_win:
+            wx = float(target_win.get("x", 0))
+            wy = float(target_win.get("y", 0))
+            ww = float(target_win.get("w", 0))
+            wh = float(target_win.get("h", 0))
+            btn_x = int(wx + ww * 0.5)
+            btn_y = int(wy + wh - 30.0)
+            tx = int(max(25.0, min(float(sw - ov.width() - 25), wx + ww * 0.5 - ov.width() * 0.5)))
+            ty = int(max(70.0, min(float(sh - ov.height() - 35), wy + wh - ov.height() * 0.85)))
+        else:
+            btn_x = sw // 2
+            btn_y = sh - 45
+            tx = int(max(25, min(sw - ov.width() - 25, btn_x - ov.width() // 2)))
+            ty = int(max(70, min(sh - ov.height() - 35, sh - ov.height() - 50)))
+
+        dist = math.hypot(tx - ov.x(), ty - ov.y())
+        is_urgent = any(k in a for k in ("urgente", "urgent", "rapido", "rápido", "ya", "deten", "para", "stop"))
+        roam_mode = "teleport" if (is_urgent or dist >= 650.0) else "playful"
+
         if is_video:
-            want_pause = (any(k in a for k in ("pause", "pausar", "deten", "para"))) or (status == "playing" and "play" not in a)
+            want_pause = (any(k in a for k in ("pause", "pausar", "deten", "para", "stop"))) or (status == "playing" and "play" not in a)
             if want_pause:
                 cmd = ["playerctl", "pause"]
                 line = random.choice([
@@ -378,9 +428,8 @@ class ScreenInteractor(QObject):
                     "Pausa en el video. Tómese su tiempo, Amo Víctor 😊",
                     "Video detenido, Amo. Atenta a cuando desee continuar ✨",
                 ])
-                if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
-                    ov.vrm_widget.set_expression("relaxed", 0.8)
-                    ov.vrm_widget.play_gesture("nod")
+                expr = "relaxed"
+                gest = "press_button"
             else:
                 cmd = ["playerctl", "play"]
                 line = random.choice([
@@ -388,49 +437,50 @@ class ScreenInteractor(QObject):
                     "¡Continuamos con el video, Amo! Aquí sigo acompañándolo 👀✨",
                     "Reproduciendo video. Disfrute mucho, Amo Víctor ▶️",
                 ])
-                if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
-                    ov.vrm_widget.set_expression("happy", 0.85)
-                    ov.vrm_widget.play_gesture("joy")
+                expr = "happy"
+                gest = "joy"
+        else:
+            want_pause = (any(k in a for k in ("pause", "pausar", "deten", "para", "stop"))) or (status == "playing" and "play" not in a)
+            if want_pause:
+                cmd = ["playerctl", "pause"]
+                line = random.choice([
+                    "Pausando su música con el Walkman, Amo Víctor ⏸️📻",
+                    "Música en pausa. Aquí guardo su sintonía, Amo 🎵✨",
+                ])
+                expr = "relaxed"
+                gest = "press_button"
+            else:
+                cmd = ["playerctl", "play"]
+                line = random.choice([
+                    "¡Play! Reanudando su música en el Walkman, Amo Víctor ▶️🎶",
+                    "¡Que siga la buena melodía, Amo! 🎵💖",
+                ])
+                expr = "happy"
+                gest = "press_button"
 
+        def _on_control_arrived():
+            self._apply_ik_hand_reach(btn_x, btn_y)
+            if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
+                ov.vrm_widget.play_gesture(gest)
+                ov.vrm_widget.set_expression(expr, 0.9)
             try:
                 subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1.0)
             except Exception:
                 pass
-
             ov.show_balloon(line, duration_ms=4500)
             if speak and hasattr(ov, "tts"):
-                ov.tts.speak_async(line, mood="caring")
-            return
+                ov.tts.speak_async(line, mood="happy")
+            QTimer.singleShot(3500, self.unperch_and_roam_home if self.is_currently_perched else ov.reset_to_idle)
 
-        want_pause = (any(k in a for k in ("pause", "pausar", "deten", "para"))) or (status == "playing" and "play" not in a)
-        if want_pause:
-            cmd = ["playerctl", "pause"]
-            gesture = "press_button"
-            line = random.choice([
-                "Pausando su música con el Walkman, Amo Víctor ⏸️📻",
-                "Música en pausa. Aquí guardo su sintonía, Amo 🎵✨",
-            ])
+        if dist > 35.0:
+            ov.smooth_roam_to(
+                tx, ty,
+                mode=roam_mode,
+                comment="¡Voy a alcanzar el control para ti, Amo Víctor! 🐾✨",
+                on_arrived=_on_control_arrived
+            )
         else:
-            cmd = ["playerctl", "play"]
-            gesture = "press_button"
-            line = random.choice([
-                "¡Play! Reanudando su música en el Walkman, Amo Víctor ▶️🎶",
-                "¡Que siga la buena melodía, Amo! 🎵💖",
-            ])
-
-        if getattr(ov, "using_vrm", False) and hasattr(ov, "vrm_widget"):
-            self._apply_ik_hand_reach(int(ov.x() + ov.width() * 0.5), int(ov.y() + ov.height() * 0.4))
-            ov.vrm_widget.start_motion(gesture)
-            ov.vrm_widget.set_expression("happy", 0.9)
-
-        try:
-            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1.0)
-        except Exception:
-            pass
-
-        ov.show_balloon(line, duration_ms=4500)
-        if speak and hasattr(ov, "tts"):
-            ov.tts.speak_async(line, mood="happy")
+            _on_control_arrived()
 
     def quick_tab_action(self, op: str = "new"):
         ov = self.overlay
